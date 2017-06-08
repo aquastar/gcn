@@ -1,9 +1,11 @@
-# init features with labels by N time
 from collections import defaultdict
 
 import numpy as np
 
-# ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
+################################################
+# The original Data format for reference
+################################################
+#  ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
 # adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask
 # adj: unweighted undirected graph
 # features: weighted fixed length vector
@@ -11,6 +13,28 @@ import numpy as np
 # y_val
 # y_test
 
+################################################
+# Important factors for simulated data
+# 1, features(distributed or one-hot):
+#   1.1, random initialization
+#   1.2, random Gaussian, assign random mean/std to each class, and control overlap among classes
+# 2, graph:
+#   2.1, random connection, echo NN
+#   2.2, KNN without initialization, strong connection within clusters, few link among clusters
+#   2.3, K-means with initializing K clusters, strong connection within clusters, few link among clusters
+#   2.4, randomly select connection level for each pair of classes, and for in-class
+# 3, label:
+#   3.1, Oracle: a random NN receiving features and graph, outputs softmax
+#   3.2, K labels for K cluster (KNN, K-means)
+#   3.3, random
+
+# sets of configuration
+# 1, feat: rand distributed; label: random; graph: random;
+# 2, feat: rand distributed; label: random; graph: sample 2 link numbers for in-class and beteewn-class;
+# 3, feat: rand distributed; label: random; graph: An oracle
+# 4, feat: related to label; label: sample feat columns, mean and std; graph: sample 2 link numbers for in-class and beteewn-class;
+# 5, feat: related to label; label: sample feat columns, mean and std; graph: An oracle
+################################################
 feat_num = 50
 mean = [5, 8, 10, 12, 15]
 cov = [[10, 5, 3, 2, 1],
