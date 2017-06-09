@@ -1,6 +1,9 @@
 import random
 from collections import defaultdict, Counter
 from itertools import combinations
+from scipy.sparse import lil_matrix, csr_matrix
+
+from scipy import sparse
 
 import numpy as np
 
@@ -27,14 +30,42 @@ import numpy as np
 # 5, feat: related to label; graph: An oracle
 ################################################
 
-
 FEAT_NUM = 10
 CLASS_NUM = 5
-DATA_NUM = 100
+DATA_NUM = 2000
 HI_MEAN = [5, 10]
 LO_MEAN = [-10, 5]
 HI_CVAR = [0, 5]
 LO_CVAR = [5, 10]
+
+
+def sample_mask(idx, l):
+    """Create mask."""
+    mask = np.zeros(l)
+    mask[idx] = 1
+    return np.array(mask, dtype=np.bool)
+
+
+def to_categorical(y, num_classes=None):
+    """Converts a class vector (integers) to binary class matrix.
+
+    E.g. for use with categorical_crossentropy.
+
+    # Arguments
+        y: class vector to be converted into a matrix
+            (integers from 0 to num_classes).
+        num_classes: total number of classes.
+
+    # Returns
+        A binary matrix representation of the input.
+    """
+    y = np.array(y, dtype='int').ravel()
+    if not num_classes:
+        num_classes = np.max(y) + 1
+    n = y.shape[0]
+    categorical = np.zeros((n, num_classes))
+    categorical[np.arange(n), y] = 1
+    return categorical
 
 
 def gen_rand_feat(data_num, feat_num):
@@ -82,11 +113,12 @@ def gen_label_feat(data_num, feat_num, class_num):
 def gen_rand_graph(data_num):
     adj_dict = {}
     for _ in xrange(data_num):
-        for __ in xrange(_ + 1, data_num):
-            print  data_num - _ - 1
-            neighbor_num = random.sample(xrange(0, data_num - _), 1)[0]
-            if neighbor_num != 0:
-                adj_dict[_] = sorted(random.sample(xrange(_, data_num), neighbor_num))
+        print  data_num - _ - 1
+        # neighbor_num = random.sample(xrange(0, (data_num - _)), 1)[0]
+        neighbor_num = random.sample(xrange(0, 20), 1)[0]  # hard threshold
+        neighbor_num = neighbor_num if neighbor_num < (data_num - _) else data_num - _
+        if neighbor_num != 0:
+            adj_dict[_] = sorted(random.sample(xrange(_, data_num), neighbor_num))
 
     adj = defaultdict(int, adj_dict)
     # adj_list = [(1, 2),
@@ -259,33 +291,56 @@ def gen_label_graph(data_num, labels):
 
 
 def gen_rand_label(data_num, class_num):
-    return np.random.choice(class_num, data_num)
+    return to_categorical(np.random.choice(class_num, data_num))
 
 
 def gen_oracle_label(graph, feat):
     pass
 
 
-if __name__ == '__main__':
+def graph_forge():
     ################################################
     # Generate simulated data
     ################################################
     feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
+    label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
     graph = gen_rand_graph(data_num=DATA_NUM)
-    label = gen_rand_label(data_num=DATA_NUM)
 
     ################################################
     # The original Data format for reference
     ################################################
-    #  ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
     # adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask
-    # adj: unweighted undirected graph
-    # features: weighted fixed length vector
-    # y_train
-    # y_val
-    # y_test
 
 
     ################################################
     # Organize training, validate, and test data
     ################################################
+    train_rate = 0.05
+    val_rate = 0.2
+    test_rate = 0.5
+
+    train_num = int(DATA_NUM * train_rate)
+    val_num = int(DATA_NUM * val_rate)
+    test_num = int(DATA_NUM * test_rate)
+
+    idx_train = range(train_num)
+    idx_val = range(train_num, train_num + val_num)
+    idx_test = range(DATA_NUM - test_num, DATA_NUM)
+
+    train_mask = sample_mask(idx_train, label.shape[0])
+    val_mask = sample_mask(idx_val, label.shape[0])
+    test_mask = sample_mask(idx_test, label.shape[0])
+
+    y_train = np.zeros(label.shape)
+    y_val = np.zeros(label.shape)
+    y_test = np.zeros(label.shape)
+
+    y_train[train_mask, :] = label[train_mask, :]
+    y_val[val_mask, :] = label[val_mask, :]
+    y_test[test_mask, :] = label[test_mask, :]
+
+    return csr_matrix(graph), lil_matrix(feat), y_train, y_val, y_test, train_mask, val_mask, test_mask
+
+
+if __name__ == '__main__':
+    graph_forge()

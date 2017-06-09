@@ -4,7 +4,7 @@ import networkx as nx
 import scipy.sparse as sp
 from scipy.sparse.linalg.eigen.arpack import eigsh
 import sys
-
+import collections
 
 def parse_index_file(filename):
     """Parse index file."""
@@ -35,6 +35,10 @@ def load_data(dataset_str):
     x, y, tx, ty, allx, ally, graph = tuple(objects)
     test_idx_reorder = parse_index_file("data/ind.{}.test.index".format(dataset_str))
     test_idx_range = np.sort(test_idx_reorder)
+
+    ttt = []
+    for _ in ally:
+        ttt.append(_.tolist().index(1))
 
     if dataset_str == 'citeseer':
         # Fix citeseer dataset (there are some isolated nodes in the graph)
