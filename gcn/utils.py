@@ -6,6 +6,9 @@ from scipy.sparse.linalg.eigen.arpack import eigsh
 import sys
 import collections
 
+from gcn.gen_simulate import graph_forge
+
+
 def parse_index_file(filename):
     """Parse index file."""
     index = []
@@ -22,6 +25,10 @@ def sample_mask(idx, l):
 
 
 def load_data(dataset_str):
+    # Simulated data
+    if dataset_str == 'simu':
+        return graph_forge(opt='label-graph')
+
     """Load data."""
     names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
     objects = []

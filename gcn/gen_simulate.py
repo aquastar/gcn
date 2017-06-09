@@ -1,11 +1,11 @@
+import copy
 import random
 from collections import defaultdict, Counter
 from itertools import combinations
-from scipy.sparse import lil_matrix, csr_matrix
 
-from scipy import sparse
-
+import networkx as nx
 import numpy as np
+from scipy.sparse import lil_matrix
 
 ################################################
 # Important factors for simulated data
@@ -32,7 +32,7 @@ import numpy as np
 
 FEAT_NUM = 10
 CLASS_NUM = 5
-DATA_NUM = 2000
+DATA_NUM = 20000
 HI_MEAN = [5, 10]
 LO_MEAN = [-10, 5]
 HI_CVAR = [0, 5]
@@ -69,12 +69,18 @@ def to_categorical(y, num_classes=None):
 
 
 def gen_rand_feat(data_num, feat_num):
-    return np.random.random((data_num, feat_num))
+    # return lil_matrix(np.random.random((data_num, feat_num)))
+
+    return lil_matrix(np.random.randint(2, size=(data_num, feat_num)).astype(float))
 
 
-def gen_label_feat(data_num, feat_num, class_num):
+def gen_label_feat(data_num, feat_num, class_num, label=None):
     # raw_labels = np.random.choice(5, 3, p=[0.1, 0, 0.3, 0.6, 0])
-    raw_labels = sorted(np.random.choice(class_num, data_num))
+    raw_labels = None
+    if label is None:
+        raw_labels = sorted(np.random.choice(class_num, data_num))
+    else:
+        raw_labels = sorted(label)
     raw_labels_dict = Counter(raw_labels)
 
     feat_list = []
@@ -91,31 +97,38 @@ def gen_label_feat(data_num, feat_num, class_num):
 
         # make covar
         feat_col_selected_bi = list(combinations(feat_col_selected, 2))
+
         cov = np.random.random_integers(LO_CVAR[0], LO_CVAR[1], size=(feat_num, feat_num))
         feat_col_cov = np.random.random_integers(HI_CVAR[0], HI_CVAR[1], size=len(feat_col_selected_bi))
+
         for select_pair_index, select_cov in zip(feat_col_selected_bi, feat_col_cov):
             i = select_pair_index[0]
             j = select_pair_index[1]
             cov[i][j] = select_cov
             cov[j][i] = select_cov
 
+        cov = np.identity(feat_num)
+
         feat_list.extend(np.random.multivariate_normal(mean, cov, _num))
 
     # shuffle
-    reorder = list(xrange(data_num))
+    feat_list = np.array(feat_list)
+    raw_labels = np.array(raw_labels)
+    reorder = np.array(list(xrange(data_num)))
+    old_order = copy.deepcopy(reorder)
     np.random.shuffle(reorder)
-    feat_list = feat_list[reorder, :]
-    raw_labels = raw_labels[reorder, :]
+    feat_list[old_order, :] = feat_list[reorder, :]
+    raw_labels[old_order] = raw_labels[reorder]
 
-    return feat_list, raw_labels
+    return lil_matrix(
+        np.rint((feat_list - feat_list.min()) / (feat_list.max() - feat_list.min())).astype(float)), raw_labels
 
 
 def gen_rand_graph(data_num):
     adj_dict = {}
     for _ in xrange(data_num):
-        print  data_num - _ - 1
         # neighbor_num = random.sample(xrange(0, (data_num - _)), 1)[0]
-        neighbor_num = random.sample(xrange(0, 20), 1)[0]  # hard threshold
+        neighbor_num = random.sample(xrange(1, 20), 1)[0]  # hard threshold
         neighbor_num = neighbor_num if neighbor_num < (data_num - _) else data_num - _
         if neighbor_num != 0:
             adj_dict[_] = sorted(random.sample(xrange(_, data_num), neighbor_num))
@@ -274,43 +287,61 @@ def gen_rand_graph(data_num):
     #     adj[v].append(k)
     # for k, v in adj.iteritems():
     #     adj[k] = list(set(v))
-    return adj
+    return nx.adjacency_matrix(nx.from_dict_of_lists(adj))
 
 
-def gen_label_graph(data_num, labels):
+def gen_label_graph(data_num, label):
     adj_dict = {}
+    group_index = {}
+    for _class in xrange(len(set(label))):
+        group_index[_class] = np.where(label == _class)[0].tolist()
+
     for _ in xrange(data_num):
-        for __ in xrange(_ + 1, data_num):
-            print  data_num - _ - 1
-            neighbor_num = random.sample(xrange(0, data_num - _), 1)[0]
-            if neighbor_num != 0:
-                adj_dict[_] = sorted(random.sample(xrange(_, data_num), neighbor_num))
+        _class = label[_]
+        self_group = group_index[_class]
+        neighbor_num = random.sample(xrange(1, 20), 1)[0]  # hard threshold
+        neighbor_num = neighbor_num if neighbor_num < (data_num - _) else data_num - _
+
+        self_conn = random.sample(self_group, neighbor_num)
+        noise_conn = random.sample(xrange(_, data_num), neighbor_num)
+        neighbors = list(noise_conn + self_conn)
+
+        adj_dict[_] = sorted(neighbors)
 
     adj = defaultdict(int, adj_dict)
-    return adj
+    return nx.adjacency_matrix(nx.from_dict_of_lists(adj))
 
 
 def gen_rand_label(data_num, class_num):
-    return to_categorical(np.random.choice(class_num, data_num))
+    return np.random.choice(class_num, data_num)
 
 
 def gen_oracle_label(graph, feat):
     pass
 
 
-def graph_forge():
+def graph_forge(opt='rand'):
     ################################################
     # Generate simulated data
     ################################################
-    feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
-    label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
-    graph = gen_rand_graph(data_num=DATA_NUM)
+    label = None
+    feat = None
+    graph = None
 
-    ################################################
-    # The original Data format for reference
-    ################################################
-    # adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask
-
+    if opt == 'rand':
+        label = to_categorical(gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM))
+        feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
+        graph = gen_rand_graph(data_num=DATA_NUM)
+    elif opt == 'label-feat':
+        label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
+        feat = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM, label=label)[0]
+        graph = gen_rand_graph(data_num=DATA_NUM)
+        label = to_categorical(label)
+    elif opt == 'label-graph':
+        label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
+        feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
+        graph = gen_label_graph(data_num=DATA_NUM, label=label)
+        label = to_categorical(label)
 
     ################################################
     # Organize training, validate, and test data
@@ -339,8 +370,8 @@ def graph_forge():
     y_val[val_mask, :] = label[val_mask, :]
     y_test[test_mask, :] = label[test_mask, :]
 
-    return csr_matrix(graph), lil_matrix(feat), y_train, y_val, y_test, train_mask, val_mask, test_mask
+    return graph, feat, y_train, y_val, y_test, train_mask, val_mask, test_mask
 
 
 if __name__ == '__main__':
-    graph_forge()
+    graph_forge(opt='label-feat')
