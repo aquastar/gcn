@@ -2,10 +2,13 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-import tensorflow as tf
 
-from gcn.utils import *
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from sklearn.metrics import roc_curve
+
 from gcn.models import GCN, MLP
+from gcn.utils import *
 
 # Set random seed
 seed = 123
@@ -70,6 +73,22 @@ def evaluate(features, support, labels, mask, placeholders):
     return outs_val[0], outs_val[1], (time.time() - t_test)
 
 
+def evaluate_roc(features, support, labels, mask, placeholders):
+    t_test = time.time()
+    feed_dict_val = construct_feed_dict(features, support, labels, mask, placeholders)
+    outs_val = sess.run([model.loss, model.accuracy, model.outputs], feed_dict=feed_dict_val)
+    # plot
+    fpr, tpr, _ = roc_curve(np.where(labels == 1)[1], np.argmax(outs_val[2], axis=1)[mask])
+
+    plt.figure(1)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.plot(fpr, tpr, label='auc:{}'.format(np.trapz(tpr, fpr)))
+    plt.legend(loc='best')
+    plt.show()
+
+    return outs_val[0], outs_val[1], (time.time() - t_test)
+
+
 # Init variables
 sess.run(tf.global_variables_initializer())
 
@@ -95,13 +114,13 @@ for epoch in range(FLAGS.epochs):
           "train_acc=", "{:.5f}".format(outs[2]), "val_loss=", "{:.5f}".format(cost),
           "val_acc=", "{:.5f}".format(acc), "time=", "{:.5f}".format(time.time() - t))
 
-    if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping+1):-1]):
+    if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
         print("Early stopping...")
         break
 
 print("Optimization Finished!")
 
 # Testing
-test_cost, test_acc, test_duration = evaluate(features, support, y_test, test_mask, placeholders)
+test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders)
 print("Test set results:", "cost=", "{:.5f}".format(test_cost),
       "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))

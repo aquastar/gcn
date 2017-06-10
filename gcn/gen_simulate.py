@@ -30,8 +30,8 @@ from scipy.sparse import lil_matrix
 # 5, feat: related to label; graph: An oracle
 ################################################
 
-FEAT_NUM = 100
-CLASS_NUM = 5
+FEAT_NUM = 1000
+CLASS_NUM = 10
 DATA_NUM = 20000
 HI_MEAN = [5, 10]
 LO_MEAN = [-10, 5]
@@ -142,10 +142,10 @@ def gen_label_feat(data_num, feat_num, class_num, label=None):
         feats = np.array([0.0] * feat_num)
         feats[feat_col_selected] = 1.0
         for _n in xrange(_num):
-            noise_num_selected = random.sample(xrange(0, 3), 1)[0]
-            if noise_num_selected != 0:
-                noise_col_selected = random.sample(xrange(feat_num), noise_num_selected)
-                feats[noise_col_selected] = 1.0
+            # noise_num_selected = random.sample(xrange(0, 3), 1)[0]
+            # if noise_num_selected != 0:
+            #     noise_col_selected = random.sample(xrange(feat_num), noise_num_selected)
+            #     feats[noise_col_selected] = 1.0
 
             feat_list.append(feats)
 
@@ -336,11 +336,13 @@ def gen_label_graph(data_num, label):
     for _ in xrange(data_num):
         _class = label[_]
         self_group = group_index[_class]
-        neighbor_num = random.sample(xrange(1, 20), 1)[0]  # hard threshold
+        neighbor_num = random.sample(xrange(5, 20), 1)[0]  # hard threshold
         neighbor_num = neighbor_num if neighbor_num < (data_num - _) else data_num - _
-
         self_conn = random.sample(self_group, neighbor_num)
-        noise_conn = random.sample(xrange(_, data_num), neighbor_num)
+
+        noise_num = random.sample(xrange(1, 5), 1)[0]  # hard threshold
+        noise_conn = random.sample(xrange(data_num), noise_num)
+
         neighbors = list(noise_conn + self_conn)
 
         adj_dict[_] = sorted(neighbors)
@@ -370,18 +372,16 @@ def graph_forge(opt='rand'):
         feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
         graph = gen_rand_graph(data_num=DATA_NUM)
     elif opt == 'label-feat':
-        label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
-        feat = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM, label=label)[0]
+        feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
         graph = gen_rand_graph(data_num=DATA_NUM)
         label = to_categorical(label)
     elif opt == 'label-graph':
         label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
-        feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
         graph = gen_label_graph(data_num=DATA_NUM, label=label)
+        feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
         label = to_categorical(label)
     elif opt == 'label-graph-feat':
-        label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
-        feat = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM, label=label)[0]
+        feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
         graph = gen_label_graph(data_num=DATA_NUM, label=label)
         label = to_categorical(label)
 
@@ -416,4 +416,4 @@ def graph_forge(opt='rand'):
 
 
 if __name__ == '__main__':
-    graph_forge(opt='label-feat')
+    graph_forge(opt='label-graph-feat')
