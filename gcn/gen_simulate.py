@@ -30,7 +30,7 @@ from scipy.sparse import lil_matrix
 # 5, feat: related to label; graph: An oracle
 ################################################
 
-FEAT_NUM = 10
+FEAT_NUM = 100
 CLASS_NUM = 5
 DATA_NUM = 20000
 HI_MEAN = [5, 10]
@@ -74,7 +74,7 @@ def gen_rand_feat(data_num, feat_num):
     return lil_matrix(np.random.randint(2, size=(data_num, feat_num)).astype(float))
 
 
-def gen_label_feat(data_num, feat_num, class_num, label=None):
+def gen_label_feat_bak(data_num, feat_num, class_num, label=None):
     # raw_labels = np.random.choice(5, 3, p=[0.1, 0, 0.3, 0.6, 0])
     raw_labels = None
     if label is None:
@@ -122,6 +122,43 @@ def gen_label_feat(data_num, feat_num, class_num, label=None):
 
     return lil_matrix(
         np.rint((feat_list - feat_list.min()) / (feat_list.max() - feat_list.min())).astype(float)), raw_labels
+
+
+def gen_label_feat(data_num, feat_num, class_num, label=None):
+    # raw_labels = np.random.choice(5, 3, p=[0.1, 0, 0.3, 0.6, 0])
+    raw_labels = None
+    if label is None:
+        raw_labels = sorted(np.random.choice(class_num, data_num))
+    else:
+        raw_labels = sorted(label)
+    raw_labels_dict = Counter(raw_labels)
+
+    feat_list = []
+
+    for _class, _num in raw_labels_dict.iteritems():
+        feat_num_selected = random.sample(xrange(3, feat_num), 1)[0]
+        feat_col_selected = random.sample(xrange(feat_num), feat_num_selected)
+
+        feats = np.array([0.0] * feat_num)
+        feats[feat_col_selected] = 1.0
+        for _n in xrange(_num):
+            noise_num_selected = random.sample(xrange(0, 3), 1)[0]
+            if noise_num_selected != 0:
+                noise_col_selected = random.sample(xrange(feat_num), noise_num_selected)
+                feats[noise_col_selected] = 1.0
+
+            feat_list.append(feats)
+
+    # shuffle
+    feat_list = np.array(feat_list)
+    raw_labels = np.array(raw_labels)
+    reorder = np.array(list(xrange(data_num)))
+    old_order = copy.deepcopy(reorder)
+    np.random.shuffle(reorder)
+    feat_list[old_order, :] = feat_list[reorder, :]
+    raw_labels[old_order] = raw_labels[reorder]
+
+    return lil_matrix(feat_list), raw_labels
 
 
 def gen_rand_graph(data_num):
@@ -342,13 +379,18 @@ def graph_forge(opt='rand'):
         feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
         graph = gen_label_graph(data_num=DATA_NUM, label=label)
         label = to_categorical(label)
+    elif opt == 'label-graph-feat':
+        label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
+        feat = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM, label=label)[0]
+        graph = gen_label_graph(data_num=DATA_NUM, label=label)
+        label = to_categorical(label)
 
     ################################################
     # Organize training, validate, and test data
     ################################################
-    train_rate = 0.05
+    train_rate = 0.5
     val_rate = 0.2
-    test_rate = 0.5
+    test_rate = 0.3
 
     train_num = int(DATA_NUM * train_rate)
     val_num = int(DATA_NUM * val_rate)
