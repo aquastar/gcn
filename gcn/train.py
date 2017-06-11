@@ -21,9 +21,9 @@ tf.set_random_seed(seed)
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed', 'simu'
-flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
+flags.DEFINE_string('model', 'dense', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('epochs', 20, 'Number of epochs to train.')
+flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
 flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
@@ -78,20 +78,20 @@ def evaluate(features, support, labels, mask, placeholders):
 def evaluate_roc(features, support, labels, mask, placeholders):
     t_test = time.time()
     feed_dict_val = construct_feed_dict(features, support, labels, mask, placeholders)
-    outs_val = sess.run(model.outputs, feed_dict=feed_dict_val)
+    loss, acc, outputs_logits = sess.run([model.loss, model.accuracy, model.outputs], feed_dict=feed_dict_val)
     # plot
     # fpr, tpr, _ = roc_curve(np.where(labels == 1)[1], np.argmax(outs_val[2], axis=1)[mask])
 
     fpr = dict()
     tpr = dict()
     roc_auc = dict()
-    n_classes =  np.shape(labels)[1]
+    n_classes = np.shape(labels)[1]
     for i in range(n_classes):
-        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], outs_val[:, i])
+        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], outputs_logits[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
 
     # Compute micro-average ROC curve and ROC area
-    fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), outs_val.ravel())
+    fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), outputs_logits.ravel())
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
     # Plot ROC curves for the multiclass problem
     # Compute macro-average ROC curve and ROC area
@@ -112,7 +112,7 @@ def evaluate_roc(features, support, labels, mask, placeholders):
 
     # Plot all ROC curves
     plt.figure()
-    lw=2
+    lw = 2
     plt.plot(fpr["micro"], tpr["micro"],
              label='micro-average ROC curve (area = {0:0.2f})'
                    ''.format(roc_auc["micro"]),
@@ -138,7 +138,7 @@ def evaluate_roc(features, support, labels, mask, placeholders):
     plt.legend(loc="lower right")
     plt.show()
 
-    return outs_val[0], outs_val[1], (time.time() - t_test)
+    return loss, acc, (time.time() - t_test)
 
 
 # Init variables

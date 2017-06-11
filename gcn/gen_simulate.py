@@ -171,159 +171,6 @@ def gen_rand_graph(data_num):
             adj_dict[_] = sorted(random.sample(xrange(_, data_num), neighbor_num))
 
     adj = defaultdict(int, adj_dict)
-    # adj_list = [(1, 2),
-    #             (1, 3),
-    #             (1, 5),
-    #             (1, 23),
-    #             (2, 3),
-    #             (2, 18),
-    #             (2, 24),
-    #             (3, 4),
-    #             (3, 12),
-    #             (3, 16),
-    #             (5, 6),
-    #             (5, 12),
-    #             (5, 18),
-    #             (5, 24),
-    #             (5, 26),
-    #             (6, 8),
-    #             (6, 10),
-    #             (6, 14),
-    #             (6, 18),
-    #             (6, 19),
-    #             (7, 10),
-    #             (7, 11),
-    #             (7, 19),
-    #             (7, 21),
-    #             (7, 24),
-    #             (8, 24),
-    #             (9, 12),
-    #             (9, 13),
-    #             (9, 15),
-    #             (9, 16),
-    #             (9, 26),
-    #             (9, 17),
-    #             (9, 18),
-    #             (10, 15),
-    #             (10, 17),
-    #             (10, 19),
-    #             (10, 21),
-    #             (10, 22),
-    #             (10, 25),
-    #             (11, 20),
-    #             (11, 21),
-    #             (12, 21),
-    #             (13, 14),
-    #             (14, 18),
-    #             (14, 24),
-    #             (15, 16),
-    #             (15, 24),
-    #             (15, 34),
-    #             (16, 17),
-    #             (16, 21),
-    #             (16, 24),
-    #             (17, 18),
-    #             (17, 23),
-    #             (18, 20),
-    #             (18, 21),
-    #             (18, 22),
-    #             (19, 21),
-    #             (19, 24),
-    #             (20, 24),
-    #             (21, 22),
-    #             (21, 24),
-    #             (22, 23),
-    #             (22, 42),
-    #             (23, 24),
-    #             (25, 26),
-    #             (25, 27),
-    #             (25, 30),
-    #             (25, 31),
-    #             (25, 32),
-    #             (25, 33),
-    #             (26, 31),
-    #             (26, 12),
-    #             (26, 38),
-    #             (26, 39),
-    #             (26, 40),
-    #             (26, 44),
-    #             (26, 48),
-    #             (26, 49),
-    #             (27, 29),
-    #             (27, 30),
-    #             (27, 31),
-    #             (27, 33),
-    #             (27, 39),
-    #             (27, 42),
-    #             (28, 30),
-    #             (28, 15),
-    #             (28, 31),
-    #             (28, 37),
-    #             (29, 30),
-    #             (29, 39),
-    #             (29, 42),
-    #             (30, 32),
-    #             (30, 33),
-    #             (30, 35),
-    #             (30, 39),
-    #             (30, 48),
-    #             (31, 48),
-    #             (31, 3),
-    #             (32, 37),
-    #             (32, 38),
-    #             (32, 39),
-    #             (32, 40),
-    #             (32, 42),
-    #             (32, 49),
-    #             (33, 49),
-    #             (34, 35),
-    #             (34, 37),
-    #             (34, 39),
-    #             (34, 41),
-    #             (34, 43),
-    #             (34, 45),
-    #             (35, 36),
-    #             (35, 18),
-    #             (35, 38),
-    #             (35, 39),
-    #             (35, 41),
-    #             (35, 42),
-    #             (35, 43),
-    #             (35, 47),
-    #             (36, 37),
-    #             (36, 38),
-    #             (36, 39),
-    #             (36, 21),
-    #             (36, 41),
-    #             (36, 42),
-    #             (36, 43),
-    #             (37, 40),
-    #             (37, 41),
-    #             (37, 45),
-    #             (38, 40),
-    #             (39, 40),
-    #             (40, 41),
-    #             (40, 45),
-    #             (40, 48),
-    #             (41, 43),
-    #             (41, 46),
-    #             (42, 45),
-    #             (43, 45),
-    #             (44, 46),
-    #             (44, 47),
-    #             (45, 46),
-    #             (45, 48),
-    #             (45, 49),
-    #             (46, 47),
-    #             (47, 48),
-    #             (48, 49),
-    #             ]
-    #
-    # for k, v in adj_list:
-    #     adj[k].append(v)
-    #     adj[v].append(k)
-    # for k, v in adj.iteritems():
-    #     adj[k] = list(set(v))
     return nx.adjacency_matrix(nx.from_dict_of_lists(adj))
 
 
@@ -368,19 +215,23 @@ def graph_forge(opt='rand'):
     graph = None
 
     if opt == 'rand':
+        print 'Data : random'
         label = to_categorical(gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM))
         feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
         graph = gen_rand_graph(data_num=DATA_NUM)
     elif opt == 'label-feat':
+        print 'Data : label-feat'
         feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
         graph = gen_rand_graph(data_num=DATA_NUM)
         label = to_categorical(label)
     elif opt == 'label-graph':
+        print 'Data : label-graph'
         label = gen_rand_label(data_num=DATA_NUM, class_num=CLASS_NUM)
         graph = gen_label_graph(data_num=DATA_NUM, label=label)
         feat = gen_rand_feat(data_num=DATA_NUM, feat_num=FEAT_NUM)
         label = to_categorical(label)
     elif opt == 'label-graph-feat':
+        print 'Data : label-graph-feat'
         feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
         graph = gen_label_graph(data_num=DATA_NUM, label=label)
         label = to_categorical(label)
