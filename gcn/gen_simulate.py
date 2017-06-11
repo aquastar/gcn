@@ -183,14 +183,14 @@ def gen_label_graph(data_num, label):
     for _ in xrange(data_num):
         _class = label[_]
         self_group = group_index[_class]
-        neighbor_num = random.sample(xrange(5, 20), 1)[0]  # hard threshold
+        neighbor_num = random.sample(xrange(1, 20), 1)[0]  # hard threshold
         neighbor_num = neighbor_num if neighbor_num < (data_num - _) else data_num - _
         self_conn = random.sample(self_group, neighbor_num)
 
         noise_num = random.sample(xrange(1, 5), 1)[0]  # hard threshold
         noise_conn = random.sample(xrange(data_num), noise_num)
 
-        neighbors = list(noise_conn + self_conn)
+        neighbors = list(self_conn)
 
         adj_dict[_] = sorted(neighbors)
 

@@ -6,8 +6,8 @@ from itertools import cycle
 
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from sklearn.metrics import roc_curve, auc
 from scipy import interp
+from sklearn.metrics import roc_curve, auc
 
 from gcn.models import GCN, MLP
 from gcn.utils import *
@@ -21,7 +21,7 @@ tf.set_random_seed(seed)
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed', 'simu'
-flags.DEFINE_string('model', 'dense', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
+flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
@@ -39,14 +39,17 @@ if FLAGS.model == 'gcn':
     support = [preprocess_adj(adj)]
     num_supports = 1
     model_func = GCN
+    print('gcn')
 elif FLAGS.model == 'gcn_cheby':
     support = chebyshev_polynomials(adj, FLAGS.max_degree)
     num_supports = 1 + FLAGS.max_degree
     model_func = GCN
+    print('gcn_cheby')
 elif FLAGS.model == 'dense':
     support = [preprocess_adj(adj)]  # Not used
     num_supports = 1
     model_func = MLP
+    print('dense')
 else:
     raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
 
@@ -75,7 +78,7 @@ def evaluate(features, support, labels, mask, placeholders):
     return outs_val[0], outs_val[1], (time.time() - t_test)
 
 
-def evaluate_roc(features, support, labels, mask, placeholders):
+def evaluate_roc(features, support, labels, mask, placeholders, name='model'):
     t_test = time.time()
     feed_dict_val = construct_feed_dict(features, support, labels, mask, placeholders)
     loss, acc, outputs_logits = sess.run([model.loss, model.accuracy, model.outputs], feed_dict=feed_dict_val)
@@ -111,7 +114,7 @@ def evaluate_roc(features, support, labels, mask, placeholders):
     roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
 
     # Plot all ROC curves
-    plt.figure()
+    plt.figure(figsize=(10,10))
     lw = 2
     plt.plot(fpr["micro"], tpr["micro"],
              label='micro-average ROC curve (area = {0:0.2f})'
@@ -123,7 +126,9 @@ def evaluate_roc(features, support, labels, mask, placeholders):
                    ''.format(roc_auc["macro"]),
              color='navy', linestyle=':', linewidth=4)
 
-    colors = cycle(['aqua', 'darkorange', 'cornflowerblue'])
+    colors = cycle(
+        ['aqua', 'darkorange', 'cornflowerblue', 'bisque', 'seagreen', 'magenta', 'b', 'c', 'r', 'plum', 'cyan',
+         'lime'])
     for i, color in zip(range(n_classes), colors):
         plt.plot(fpr[i], tpr[i], color=color, lw=lw,
                  label='ROC curve of class {0} (area = {1:0.2f})'
@@ -134,9 +139,10 @@ def evaluate_roc(features, support, labels, mask, placeholders):
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Some extension of Receiver operating characteristic to multi-class')
+    plt.title('{}, Precison:{}'.format(name, acc))
     plt.legend(loc="lower right")
-    plt.show()
+    # plt.show()
+    plt.savefig(name)
 
     return loss, acc, (time.time() - t_test)
 
@@ -173,6 +179,6 @@ for epoch in range(FLAGS.epochs):
 print("Optimization Finished!")
 
 # Testing
-test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders)
+test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders, name=FLAGS.model)
 print("Test set results:", "cost=", "{:.5f}".format(test_cost),
       "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))
