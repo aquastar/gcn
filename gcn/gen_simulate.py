@@ -239,7 +239,7 @@ def graph_forge(opt='rand'):
     ################################################
     # Organize training, validate, and test data
     ################################################
-    train_rate = 0.5
+    train_rate = 0.1
     val_rate = 0.2
     test_rate = 0.3
 
@@ -267,4 +267,4 @@ def graph_forge(opt='rand'):
 
 
 if __name__ == '__main__':
-    graph_forge(opt='label-graph-feat')
+    graph_forge(opt='rand')

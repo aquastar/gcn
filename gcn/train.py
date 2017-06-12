@@ -81,7 +81,8 @@ def evaluate(features, support, labels, mask, placeholders):
 def evaluate_roc(features, support, labels, mask, placeholders, name='model'):
     t_test = time.time()
     feed_dict_val = construct_feed_dict(features, support, labels, mask, placeholders)
-    loss, acc, outputs_logits = sess.run([model.loss, model.accuracy, model.outputs], feed_dict=feed_dict_val)
+    loss, acc, outputs_logits, _ = sess.run([model.loss, model.accuracy, model.outputs, model.activations],
+                                            feed_dict=feed_dict_val)
     # plot
     # fpr, tpr, _ = roc_curve(np.where(labels == 1)[1], np.argmax(outs_val[2], axis=1)[mask])
 
@@ -114,7 +115,7 @@ def evaluate_roc(features, support, labels, mask, placeholders, name='model'):
     roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
 
     # Plot all ROC curves
-    plt.figure(figsize=(10,10))
+    plt.figure(figsize=(10, 10))
     lw = 2
     plt.plot(fpr["micro"], tpr["micro"],
              label='micro-average ROC curve (area = {0:0.2f})'
