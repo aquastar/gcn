@@ -5,6 +5,7 @@ from itertools import combinations
 
 import networkx as nx
 import numpy as np
+from networkx import from_scipy_sparse_matrix
 from scipy.sparse import lil_matrix
 
 ################################################
@@ -267,4 +268,9 @@ def graph_forge(opt='rand'):
 
 
 if __name__ == '__main__':
-    graph_forge(opt='rand')
+    graph = graph_forge(opt='rand')
+    # get adj list for Deepwalk input
+    adjlist = [str(k) + '\t' + '\t'.join(map(str, v.keys())) for k, v in
+               from_scipy_sparse_matrix(graph[0]).adj.iteritems()]
+    f = open('adjlist.dw', 'w')
+    f.write('\n'.join(adjlist))
