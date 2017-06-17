@@ -1,3 +1,4 @@
+import cPickle as pk
 import copy
 import random
 from collections import defaultdict, Counter
@@ -268,9 +269,11 @@ def graph_forge(opt='rand'):
 
 
 if __name__ == '__main__':
-    graph = graph_forge(opt='rand')
+    graph = graph_forge(opt='label-graph-feat')
     # get adj list for Deepwalk input
     adjlist = [str(k) + '\t' + '\t'.join(map(str, v.keys())) for k, v in
                from_scipy_sparse_matrix(graph[0]).adj.iteritems()]
     f = open('adjlist.dw', 'w')
     f.write('\n'.join(adjlist))
+
+    pk.dump(graph, open('graph.dat', 'wb'))
