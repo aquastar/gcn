@@ -32,9 +32,9 @@ from scipy.sparse import lil_matrix
 # 5, feat: related to label; graph: An oracle
 ################################################
 
-FEAT_NUM = 100
-CLASS_NUM = 2
-DATA_NUM = 20000
+FEAT_NUM = 1000
+CLASS_NUM = 10
+DATA_NUM = 10000
 HI_MEAN = [5, 10]
 LO_MEAN = [-10, 5]
 HI_CVAR = [0, 5]
@@ -241,7 +241,7 @@ def graph_forge(opt='rand'):
     ################################################
     # Organize training, validate, and test data
     ################################################
-    train_rate = 0.1
+    train_rate = 0.5
     val_rate = 0.2
     test_rate = 0.3
 
