@@ -1,5 +1,4 @@
 from gcn.inits import *
-import tensorflow as tf
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -216,8 +215,8 @@ class GraphConvolution_Rational(Layer):
 
         with tf.variable_scope(self.name + '_vars'):
             for i in range(2 * support_len):
-                self.vars['weights_' + str(i)] = glorot([input_dim, output_dim],
-                                                        name='weights_' + str(i))
+                self.vars['weights_' + str(i)] = tf.truncated_normal([1], name='weights_' + str(i))
+            self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
 
@@ -237,19 +236,29 @@ class GraphConvolution_Rational(Layer):
 
         # convolve
         supports = list()
+        supports_denom = list()
+
         for i in range(support_len):
-            if not self.featureless:
-                pre_sup = dot(x, self.vars['weights_' + str(i)],
-                              sparse=self.sparse_inputs)
-                pre_sup_denom = dot(x, self.vars['weights_' + str(i + support_len)],
-                                    sparse=self.sparse_inputs)
-                pre_sup_denom_inv = tf.matrix_inverse(pre_sup_denom)
-                pre_sup = dot(pre_sup, pre_sup_denom_inv)
-            else:
-                pre_sup = self.vars['weights_' + str(i)]
-            support = dot(self.support[i], pre_sup, sparse=True)
-            supports.append(support)
+            pre_sup = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
+
+            pre_sup_denom = dot(self.support[i], self.vars['weights_' + str(i + support_len)], sparse=True)
+
+            supports.append(pre_sup)
+            supports_denom.append(pre_sup_denom)
+            #
+            # if not self.featureless:
+            #     pre_sup = dot(x, self.vars['weights_' + str(i)], sparse=self.sparse_inputs)
+            # else:
+            #     pre_sup = self.vars['weights_' + str(i)]
+            #
+            # support = dot(self.support[i], pre_sup, sparse=True)
+            #
+            # supports.append(support)
         output = tf.add_n(supports)
+        output_denom = tf.add_n(supports_denom)
+        output = dot(output, tf.matrix_inverse(output_denom))
+        output = dot(output, x)
+        output = dot(output, self.vars['weights_uni'])
 
         # bias
         if self.bias:
