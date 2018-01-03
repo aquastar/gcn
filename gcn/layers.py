@@ -24,7 +24,7 @@ def sparse_dropout(x, keep_prob, noise_shape):
     random_tensor += tf.random_uniform(noise_shape)
     dropout_mask = tf.cast(tf.floor(random_tensor), dtype=tf.bool)
     pre_out = tf.sparse_retain(x, dropout_mask)
-    return pre_out * (1./keep_prob)
+    return pre_out * (1. / keep_prob)
 
 
 def dot(x, y, sparse=False):
@@ -84,6 +84,7 @@ class Layer(object):
 
 class Dense(Layer):
     """Dense layer."""
+
     def __init__(self, input_dim, output_dim, placeholders, dropout=0., sparse_inputs=False,
                  act=tf.nn.relu, bias=False, featureless=False, **kwargs):
         super(Dense, self).__init__(**kwargs)
@@ -115,9 +116,9 @@ class Dense(Layer):
 
         # dropout
         if self.sparse_inputs:
-            x = sparse_dropout(x, 1-self.dropout, self.num_features_nonzero)
+            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
         else:
-            x = tf.nn.dropout(x, 1-self.dropout)
+            x = tf.nn.dropout(x, 1 - self.dropout)
 
         # transform
         output = dot(x, self.vars['weights'], sparse=self.sparse_inputs)
@@ -131,6 +132,7 @@ class Dense(Layer):
 
 class GraphConvolution(Layer):
     """Graph convolution layer."""
+
     def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
                  sparse_inputs=False, act=tf.nn.relu, bias=False,
                  featureless=False, **kwargs):
@@ -165,9 +167,9 @@ class GraphConvolution(Layer):
 
         # dropout
         if self.sparse_inputs:
-            x = sparse_dropout(x, 1-self.dropout, self.num_features_nonzero)
+            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
         else:
-            x = tf.nn.dropout(x, 1-self.dropout)
+            x = tf.nn.dropout(x, 1 - self.dropout)
 
         # convolve
         supports = list()
@@ -175,6 +177,74 @@ class GraphConvolution(Layer):
             if not self.featureless:
                 pre_sup = dot(x, self.vars['weights_' + str(i)],
                               sparse=self.sparse_inputs)
+            else:
+                pre_sup = self.vars['weights_' + str(i)]
+            support = dot(self.support[i], pre_sup, sparse=True)
+            supports.append(support)
+        output = tf.add_n(supports)
+
+        # bias
+        if self.bias:
+            output += self.vars['bias']
+
+        return self.act(output)
+
+
+class GraphConvolution_Rational(Layer):
+    """Graph convolution Rational layer."""
+
+    def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
+                 sparse_inputs=False, act=tf.nn.relu, bias=False,
+                 featureless=False, **kwargs):
+        super(GraphConvolution_Rational, self).__init__(**kwargs)
+
+        if dropout:
+            self.dropout = placeholders['dropout']
+        else:
+            self.dropout = 0.
+
+        self.act = act
+        self.support = placeholders['support']
+        self.sparse_inputs = sparse_inputs
+        self.featureless = featureless
+        self.bias = bias
+
+        # helper variable for sparse dropout
+        self.num_features_nonzero = placeholders['num_features_nonzero']
+
+        support_len = len(self.support)
+
+        with tf.variable_scope(self.name + '_vars'):
+            for i in range(2 * support_len):
+                self.vars['weights_' + str(i)] = glorot([input_dim, output_dim],
+                                                        name='weights_' + str(i))
+            if self.bias:
+                self.vars['bias'] = zeros([output_dim], name='bias')
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        x = inputs
+
+        support_len = len(self.support)
+
+        # dropout
+        if self.sparse_inputs:
+            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
+        else:
+            x = tf.nn.dropout(x, 1 - self.dropout)
+
+        # convolve
+        supports = list()
+        for i in range(support_len):
+            if not self.featureless:
+                pre_sup = dot(x, self.vars['weights_' + str(i)],
+                              sparse=self.sparse_inputs)
+                pre_sup_denom = dot(x, self.vars['weights_' + str(i + support_len)],
+                                    sparse=self.sparse_inputs)
+                pre_sup_denom_inv = tf.matrix_inverse(pre_sup_denom)
+                pre_sup = dot(pre_sup, pre_sup_denom_inv)
             else:
                 pre_sup = self.vars['weights_' + str(i)]
             support = dot(self.support[i], pre_sup, sparse=True)
