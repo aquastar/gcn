@@ -9,7 +9,7 @@ import tensorflow as tf
 from scipy import interp
 from sklearn.metrics import roc_curve, auc
 
-from gcn.models import GCN, MLP
+from gcn.models import GCN, MLP, RAT
 from gcn.utils import *
 
 # Set random seed
@@ -21,9 +21,9 @@ tf.set_random_seed(seed)
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed', 'simu'
-flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
+flags.DEFINE_string('model', 'rat', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')
+flags.DEFINE_integer('epochs', 100, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
 flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
@@ -50,6 +50,11 @@ elif FLAGS.model == 'dense':
     num_supports = 1
     model_func = MLP
     print('dense')
+elif FLAGS.model == 'rat':
+    support = chebyshev_rational(adj, FLAGS.max_degree)
+    num_supports = 1 + FLAGS.max_degree
+    model_func = RAT
+    print('rational')
 else:
     raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
 
@@ -150,6 +155,10 @@ def evaluate_roc(features, support, labels, mask, placeholders, name='model'):
 
 # Init variables
 sess.run(tf.global_variables_initializer())
+
+logdir = '/Users/danny/PycharmProjects/gcn/tflog'
+tb_write = tf.summary.FileWriter(logdir)
+tb_write.add_graph(sess.graph)
 
 cost_val = []
 

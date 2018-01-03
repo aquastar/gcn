@@ -50,12 +50,12 @@ def load_data(dataset_str):
     if dataset_str == 'citeseer':
         # Fix citeseer dataset (there are some isolated nodes in the graph)
         # Find isolated nodes, add them as zero-vecs into the right position
-        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder)+1)
+        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
         tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
-        tx_extended[test_idx_range-min(test_idx_range), :] = tx
+        tx_extended[test_idx_range - min(test_idx_range), :] = tx
         tx = tx_extended
         ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))
-        ty_extended[test_idx_range-min(test_idx_range), :] = ty
+        ty_extended[test_idx_range - min(test_idx_range), :] = ty
         ty = ty_extended
 
     features = sp.vstack((allx, tx)).tolil()
@@ -67,7 +67,7 @@ def load_data(dataset_str):
 
     idx_test = test_idx_range.tolist()
     idx_train = range(len(y))
-    idx_val = range(len(y), len(y)+500)
+    idx_val = range(len(y), len(y) + 500)
 
     train_mask = sample_mask(idx_train, labels.shape[0])
     val_mask = sample_mask(idx_val, labels.shape[0])
@@ -85,6 +85,7 @@ def load_data(dataset_str):
 
 def sparse_to_tuple(sparse_mx):
     """Convert sparse matrix to tuple representation."""
+
     def to_tuple(mx):
         if not sp.isspmatrix_coo(mx):
             mx = mx.tocoo()
@@ -156,7 +157,53 @@ def chebyshev_polynomials(adj, k):
         s_lap = sp.csr_matrix(scaled_lap, copy=True)
         return 2 * s_lap.dot(t_k_minus_one) - t_k_minus_two
 
-    for i in range(2, k+1):
+    for i in range(2, k + 1):
+        t_k.append(chebyshev_recurrence(t_k[-1], t_k[-2], scaled_laplacian))
+
+    return sparse_to_tuple(t_k)
+
+
+def chebyshev_rational(adj, k):
+    """Calculate rational up to order of k. Return a list of sparse matrices"""
+    print("Calculating rational approximation up to order {}...".format(k))
+
+    adj_normalized = normalize_adj(adj)
+    laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+    scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
+
+    t_k = list()
+    t_k.append(sp.eye(adj.shape[0]))
+    t_k.append(scaled_laplacian)
+
+    def chebyshev_recurrence(t_k_minus_one, t_k_minus_two, scaled_lap):
+        s_lap = sp.csr_matrix(scaled_lap, copy=True)
+        return 2 * s_lap.dot(t_k_minus_one) - t_k_minus_two
+
+    for i in range(2, k + 1):
+        t_k.append(chebyshev_recurrence(t_k[-1], t_k[-2], scaled_laplacian))
+
+    return sparse_to_tuple(t_k)
+
+
+def rational_simplified(adj, k):
+    """Calculate rational up to order of k. Return a list of sparse matrices"""
+    print("Calculating rational approximation up to order {}...".format(k))
+
+    adj_normalized = normalize_adj(adj)
+    laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+    scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
+
+    t_k = list()
+    t_k.append(sp.eye(adj.shape[0]))
+    t_k.append(scaled_laplacian)
+
+    def chebyshev_recurrence(t_k_minus_one, t_k_minus_two, scaled_lap):
+        s_lap = sp.csr_matrix(scaled_lap, copy=True)
+        return 2 * s_lap.dot(t_k_minus_one) - t_k_minus_two
+
+    for i in range(2, k + 1):
         t_k.append(chebyshev_recurrence(t_k[-1], t_k[-2], scaled_laplacian))
 
     return sparse_to_tuple(t_k)
