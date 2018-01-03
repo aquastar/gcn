@@ -157,7 +157,6 @@ class GCN(Model):
                                         self.placeholders['labels_mask'])
 
     def _build(self):
-
         self.layers.append(GraphConvolution(input_dim=self.input_dim,
                                             output_dim=FLAGS.hidden1,
                                             placeholders=self.placeholders,
@@ -165,7 +164,21 @@ class GCN(Model):
                                             dropout=True,
                                             sparse_inputs=True,
                                             logging=self.logging))
-        #
+
+        # self.layers.append(GraphConvolution(input_dim=FLAGS.hidden1,
+        #                                     output_dim=FLAGS.hidden1,
+        #                                     placeholders=self.placeholders,
+        #                                     act=tf.nn.relu,
+        #                                     dropout=True,
+        #                                     logging=self.logging))
+
+        # self.layers.append(GraphConvolution(input_dim=FLAGS.hidden1,
+        #                                     output_dim=FLAGS.hidden1,
+        #                                     placeholders=self.placeholders,
+        #                                     act=tf.nn.relu,
+        #                                     dropout=True,
+        #                                     logging=self.logging))
+
         # self.layers.append(GraphConvolution(input_dim=FLAGS.hidden1,
         #                                     output_dim=FLAGS.hidden1,
         #                                     placeholders=self.placeholders,
