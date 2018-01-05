@@ -288,7 +288,7 @@ class GraphConvolution_Rational_PFD(Layer):
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
         with tf.variable_scope(self.name + '_vars'):
-            for i in range(FLAGS.max_degree):
+            for i in range(2 * FLAGS.max_degree):
                 self.vars['weights_' + str(i)] = random_normal([DATA_NUM, DATA_NUM], name='weights_' + str(i))
 
             self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
@@ -314,7 +314,8 @@ class GraphConvolution_Rational_PFD(Layer):
 
         supports = list()
         for i in range(FLAGS.max_degree):
-            sup = tf.matrix_inverse(dot(self.support[0], self.vars['weights_' + str(i)], sparse=True))
+            sup = tf.matrix_inverse(tf.add_n([dot(self.support[0], self.vars['weights_' + str(i)], sparse=True),
+                                             self.vars['weights_' + str(i + FLAGS.max_degree)]]))
             supports.append(sup)
 
         pre_left = tf.add_n(supports)
