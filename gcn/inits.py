@@ -8,9 +8,21 @@ def uniform(shape, scale=0.05, name=None):
     return tf.Variable(initial, name=name)
 
 
+def truncated_normal(shape, name=None):
+    """truncated_normal init."""
+    initial = tf.truncated_normal(shape, dtype=tf.float32)
+    return tf.Variable(initial, name=name)
+
+
+def random_normal(shape, name=None):
+    """truncated_normal init."""
+    initial = tf.random_normal(shape, dtype=tf.float32)
+    return tf.Variable(initial, name=name)
+
+
 def glorot(shape, name=None):
     """Glorot & Bengio (AISTATS 2010) init."""
-    init_range = np.sqrt(6.0/(shape[0]+shape[1]))
+    init_range = np.sqrt(6.0 / (shape[0] + shape[1]))
     initial = tf.random_uniform(shape, minval=-init_range, maxval=init_range, dtype=tf.float32)
     return tf.Variable(initial, name=name)
 

@@ -3,6 +3,9 @@ from gcn.inits import *
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
+from gen_simulate import FEAT_NUM, CLASS_NUM, DATA_NUM
+DATA_NUM=2708
+
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}
 
@@ -211,12 +214,12 @@ class GraphConvolution_Rational(Layer):
         # helper variable for sparse dropout
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
-        support_len = len(self.support)
-
         with tf.variable_scope(self.name + '_vars'):
-            for i in range(2 * support_len):
-                self.vars['weights_' + str(i)] = tf.truncated_normal([1], name='weights_' + str(i))
+            for i in range(2 * len(self.support)):
+                self.vars['weights_' + str(i)] = random_normal([DATA_NUM, DATA_NUM], name='weights_' + str(i))
+
             self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
+
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
 
@@ -224,9 +227,8 @@ class GraphConvolution_Rational(Layer):
             self._log_vars()
 
     def _call(self, inputs):
+        # shape: [input #, input_dim]
         x = inputs
-
-        support_len = len(self.support)
 
         # dropout
         if self.sparse_inputs:
@@ -234,31 +236,31 @@ class GraphConvolution_Rational(Layer):
         else:
             x = tf.nn.dropout(x, 1 - self.dropout)
 
-        # convolve
-        supports = list()
-        supports_denom = list()
+        # rational convole
+        pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
 
-        for i in range(support_len):
-            pre_sup = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
+        # with tf.Session() as sess:
+        #     print("See: %i" % sess.run([self.vars['weights_0'],self.support[0]], feed_dict={}))
 
-            pre_sup_denom = dot(self.support[i], self.vars['weights_' + str(i + support_len)], sparse=True)
+        supports_no = list()
+        supports_de = list()
+        for i in range(len(self.support)):
+            # sup = dot(self.support[i], tf.multiply(self.vars['weights_' + str(i)], tf.eye(200)), sparse=True)
+            # supports_no.append(sup)
+            # sup = dot(self.support[i], tf.multiply(self.vars['weights_' + str(i + len(self.support))], tf.eye(200)),
+            #           sparse=True)
+            # supports_de.append(sup)
+            sup = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
+            supports_no.append(sup)
+            sup = dot(self.support[i], self.vars['weights_' + str(i + len(self.support))],
+                      sparse=True)
+            supports_de.append(sup)
 
-            supports.append(pre_sup)
-            supports_denom.append(pre_sup_denom)
-            #
-            # if not self.featureless:
-            #     pre_sup = dot(x, self.vars['weights_' + str(i)], sparse=self.sparse_inputs)
-            # else:
-            #     pre_sup = self.vars['weights_' + str(i)]
-            #
-            # support = dot(self.support[i], pre_sup, sparse=True)
-            #
-            # supports.append(support)
-        output = tf.add_n(supports)
-        output_denom = tf.add_n(supports_denom)
-        output = dot(output, tf.matrix_inverse(output_denom))
-        output = dot(output, x)
-        output = dot(output, self.vars['weights_uni'])
+        output_no = tf.add_n(supports_no)
+        output_de = tf.add_n(supports_de)
+        pre_left = dot(output_no, tf.matrix_inverse(output_de))
+        output = dot(pre_left, pre_right)
+
 
         # bias
         if self.bias:

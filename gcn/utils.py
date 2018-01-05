@@ -2,6 +2,7 @@ import numpy as np
 import pickle as pkl
 import networkx as nx
 import scipy.sparse as sp
+from scipy.sparse.linalg import inv
 from scipy.sparse.linalg.eigen.arpack import eigsh
 import sys
 import collections
@@ -186,7 +187,7 @@ def chebyshev_rational(adj, k):
     return sparse_to_tuple(t_k)
 
 
-def rational_simplified(adj, k):
+def normal_rational(adj, k):
     """Calculate rational up to order of k. Return a list of sparse matrices"""
     print("Calculating rational approximation up to order {}...".format(k))
 
@@ -199,11 +200,10 @@ def rational_simplified(adj, k):
     t_k.append(sp.eye(adj.shape[0]))
     t_k.append(scaled_laplacian)
 
-    def chebyshev_recurrence(t_k_minus_one, t_k_minus_two, scaled_lap):
-        s_lap = sp.csr_matrix(scaled_lap, copy=True)
-        return 2 * s_lap.dot(t_k_minus_one) - t_k_minus_two
+    def normal_recurrence(scaled_lap, k):
+        return scaled_lap.power(k)
 
     for i in range(2, k + 1):
-        t_k.append(chebyshev_recurrence(t_k[-1], t_k[-2], scaled_laplacian))
+        t_k.append(normal_recurrence(scaled_laplacian, i))
 
     return sparse_to_tuple(t_k)
