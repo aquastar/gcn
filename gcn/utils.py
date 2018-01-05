@@ -207,3 +207,18 @@ def normal_rational(adj, k):
         t_k.append(normal_recurrence(scaled_laplacian, i))
 
     return sparse_to_tuple(t_k)
+
+
+def pfd_rational(adj, k):
+    """Calculate rational up to order of k. Return a list of sparse matrices"""
+    print("Calculating rational approximation up to order {}...".format(k))
+
+    adj_normalized = normalize_adj(adj)
+    laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+    scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
+
+    t_k = list()
+    t_k.append(scaled_laplacian)
+
+    return sparse_to_tuple(t_k)
