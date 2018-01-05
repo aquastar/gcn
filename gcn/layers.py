@@ -3,8 +3,7 @@ from gcn.inits import *
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-from gen_simulate import FEAT_NUM, CLASS_NUM, DATA_NUM
-DATA_NUM=2708
+from gen_simulate import DATA_NUM
 
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}
@@ -260,7 +259,6 @@ class GraphConvolution_Rational(Layer):
         output_de = tf.add_n(supports_de)
         pre_left = dot(output_no, tf.matrix_inverse(output_de))
         output = dot(pre_left, pre_right)
-
 
         # bias
         if self.bias:
