@@ -238,12 +238,12 @@ class GraphConvolution_Rational(Layer):
             x = tf.nn.dropout(x, 1 - self.dropout)
 
         # rational convole
-        pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
+        pre_right = dot(x, self.vars['weights_uni'])
 
         supports_no = list()
         supports_de = list()
         for i in range(len(self.support)):
-            sup = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
+            sup = dot(self.support[i], self.vars['weights_' + str(i)])
             supports_no.append(sup)
             sup = dot(self.support[i], self.vars['weights_' + str(i + len(self.support))],
                       sparse=True)
@@ -315,7 +315,7 @@ class GraphConvolution_Rational_PFD(Layer):
         supports = list()
         for i in range(FLAGS.max_degree):
             sup = tf.matrix_inverse(tf.add_n([dot(self.support[0], self.vars['weights_' + str(i)], sparse=True),
-                                             self.vars['weights_' + str(i + FLAGS.max_degree)]]))
+                                              self.vars['weights_' + str(i + FLAGS.max_degree)]]))
             supports.append(sup)
 
         pre_left = tf.add_n(supports)
@@ -329,5 +329,72 @@ class GraphConvolution_Rational_PFD(Layer):
         # try norm_batch
         # bn = tf.layers.batch_normalization(output,axis=1,center=True,scale=False)
         # output = slim.batch_norm(output, is_training=True)
+
+        return self.act(output)
+
+
+class test_layer(Layer):
+    """Graph convolution Rational layer."""
+
+    def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
+                 sparse_inputs=False, act=tf.nn.relu, bias=False,
+                 featureless=False, **kwargs):
+        super(test_layer, self).__init__(**kwargs)
+
+        if dropout:
+            self.dropout = placeholders['dropout']
+        else:
+            self.dropout = 0.
+
+        self.act = act
+        self.support = placeholders['support']
+        self.sparse_inputs = sparse_inputs
+        self.featureless = featureless
+        self.bias = bias
+
+        with tf.variable_scope(self.name + '_vars'):
+            for i in range(2 * len(self.support)):
+                self.vars['weights_' + str(i)] = random_normal([1, 1], name='weights_' + str(i))
+
+            self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
+
+            if self.bias:
+                self.vars['bias'] = zeros([output_dim], name='bias')
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        # shape: [input #, input_dim]
+        x = inputs
+
+        # dropout
+        # x = tf.nn.dropout(x, 1 - self.dropout)
+
+        # rational convole
+        pre_right = self.vars['weights_uni']
+
+        supports_no = list()
+        supports_de = list()
+        for i in range(len(self.support)):
+            sup = tf.multiply(self.support[i], self.vars['weights_' + str(i)])
+            supports_no.append(sup)
+            sup = tf.multiply(self.support[i], self.vars['weights_' + str(i + len(self.support))])
+            supports_de.append(sup)
+
+        output_no = tf.add_n(supports_no)
+        output_de = tf.add_n(supports_de)
+        pre_left = tf.div(output_no, output_de)
+        output = tf.multiply(pre_left, pre_right)
+
+        # bias
+        if self.bias:
+            output += self.vars['bias']
+
+        # try norm_batch
+        # bn = tf.layers.batch_normalization(output,axis=1,center=True,scale=False)
+        # output = slim.batch_norm(output, is_training=True)
+
+        # output = tf.nn.dropout(output, 1 - self.dropout)
 
         return self.act(output)

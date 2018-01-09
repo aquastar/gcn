@@ -205,19 +205,64 @@ class RAT(Model):
 
     def _build(self):
         self.layers.append(GraphConvolution_Rational_PFD(input_dim=self.input_dim,
-                                                     output_dim=FLAGS.hidden1,
-                                                     placeholders=self.placeholders,
-                                                     act=tf.nn.relu,
-                                                     dropout=True,
-                                                     sparse_inputs=True,
-                                                     logging=self.logging))
+                                                         output_dim=FLAGS.hidden1,
+                                                         placeholders=self.placeholders,
+                                                         act=tf.nn.relu,
+                                                         dropout=True,
+                                                         sparse_inputs=True,
+                                                         logging=self.logging))
 
         self.layers.append(GraphConvolution_Rational_PFD(input_dim=FLAGS.hidden1,
-                                                     output_dim=self.output_dim,
-                                                     placeholders=self.placeholders,
-                                                     act=lambda x: x,
-                                                     dropout=True,
-                                                     logging=self.logging))
+                                                         output_dim=self.output_dim,
+                                                         placeholders=self.placeholders,
+                                                         act=lambda x: x,
+                                                         dropout=True,
+                                                         logging=self.logging))
 
     def predict(self):
         return tf.nn.softmax(self.outputs)
+
+
+class test_model(Model):
+    def __init__(self, placeholders, input_dim, **kwargs):
+        super(test_model, self).__init__(**kwargs)
+
+        self.input_dim = input_dim
+        self.output_dim = placeholders['labels'].get_shape().as_list()[1]
+        self.placeholders = placeholders
+
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+
+        self.build()
+
+    def _loss(self):
+        # Weight decay loss
+        for var in self.layers[0].vars.values():
+            self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
+
+        # Cross entropy error
+        self.loss += masked_regress_loss(self.outputs, self.placeholders['labels'],
+                                         self.placeholders['labels_mask'])
+
+    def _accuracy(self):
+        self.accuracy = masked_regress_accuracy(self.outputs, self.placeholders['labels'],
+                                                self.placeholders['labels_mask'])
+
+    def _build(self):
+        # self.layers.append(test_layer(input_dim=self.input_dim,
+        #                                              output_dim=FLAGS.hidden1,
+        #                                              placeholders=self.placeholders,
+        #                                              act=tf.nn.relu,
+        #                                              dropout=True,
+        #                                              sparse_inputs=True,
+        #                                              logging=self.logging))
+
+        self.layers.append(test_layer(input_dim=self.input_dim,
+                                      output_dim=self.output_dim,
+                                      placeholders=self.placeholders,
+                                      act=lambda x: x,
+                                      dropout=True,
+                                      logging=self.logging))
+
+    def predict(self):
+        return self.outputs
