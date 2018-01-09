@@ -189,6 +189,7 @@ def gen_label_graph(data_num, label):
         neighbor_num = neighbor_num if neighbor_num < (data_num - _) else data_num - _
         self_conn = random.sample(self_group, neighbor_num)
 
+        # add noise
         noise_num = random.sample(xrange(1, 5), 1)[0]  # hard threshold
         noise_conn = random.sample(xrange(data_num), noise_num)
 
@@ -241,9 +242,9 @@ def graph_forge(opt='rand'):
     ################################################
     # Organize training, validate, and test data
     ################################################
-    train_rate = 0.5
+    train_rate = 0.7
     val_rate = 0.2
-    test_rate = 0.3
+    test_rate = 0.1
 
     train_num = int(DATA_NUM * train_rate)
     val_num = int(DATA_NUM * val_rate)

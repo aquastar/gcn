@@ -55,6 +55,11 @@ elif FLAGS.model == 'rat':
     num_supports = 1 + FLAGS.max_degree
     model_func = RAT
     print('rational')
+elif FLAGS.model == 'rat_pfd':
+    support = pfd_rational(adj, FLAGS.max_degree)
+    num_supports = 1
+    model_func = RAT
+    print('rational_pfd')
 else:
     raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
 
