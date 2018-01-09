@@ -238,12 +238,12 @@ class GraphConvolution_Rational(Layer):
             x = tf.nn.dropout(x, 1 - self.dropout)
 
         # rational convole
-        pre_right = dot(x, self.vars['weights_uni'])
+        pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
 
         supports_no = list()
         supports_de = list()
         for i in range(len(self.support)):
-            sup = dot(self.support[i], self.vars['weights_' + str(i)])
+            sup = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
             supports_no.append(sup)
             sup = dot(self.support[i], self.vars['weights_' + str(i + len(self.support))],
                       sparse=True)
@@ -366,7 +366,7 @@ class test_layer(Layer):
 
     def _call(self, inputs):
         # shape: [input #, input_dim]
-        x = inputs
+        # x = inputs
 
         # dropout
         # x = tf.nn.dropout(x, 1 - self.dropout)
