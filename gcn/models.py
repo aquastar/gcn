@@ -204,7 +204,7 @@ class RAT(Model):
                                         self.placeholders['labels_mask'])
 
     def _build(self):
-        self.layers.append(GraphConvolution_Rational_PFD(input_dim=self.input_dim,
+        self.layers.append(GraphConvolution_Rational(input_dim=self.input_dim,
                                                          output_dim=FLAGS.hidden1,
                                                          placeholders=self.placeholders,
                                                          act=tf.nn.relu,
@@ -212,7 +212,7 @@ class RAT(Model):
                                                          sparse_inputs=True,
                                                          logging=self.logging))
 
-        self.layers.append(GraphConvolution_Rational_PFD(input_dim=FLAGS.hidden1,
+        self.layers.append(GraphConvolution_Rational(input_dim=FLAGS.hidden1,
                                                          output_dim=self.output_dim,
                                                          placeholders=self.placeholders,
                                                          act=lambda x: x,

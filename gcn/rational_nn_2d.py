@@ -19,31 +19,33 @@ def sample_mask(idx, l):
     return np.array(mask, dtype=np.bool)
 
 
-def f(x, opt=3):
+def f(x, opt=1):
+    func = None
     if opt == 1:
-        return np.sqrt(abs(x - 3))
+        func = np.sqrt(abs(x - 3))
     elif opt == 2:
-        return np.minimum(abs(x), np.exp(x))
+        func = np.minimum(abs(x), np.exp(x))
     elif opt == 3:
-        return np.sign(x)
+        func = np.sign(x)
     elif opt == 4:
-        return np.sqrt(abs(x - 3))
+        func = np.sqrt(abs(x - 3))
     elif opt == 5:
-        return 10 * abs(x)
+        func = 10 * abs(x)
     elif opt == 6:
-        return 1 + abs(x) / x
-    elif opt == 7:
-        return np.sqrt(x)
+        func = 1 + x / (abs(x) + 0.1)
+    elif opt == 7:  # Need all positive X
+        func = np.sqrt(x)
     elif opt == 8:
-        return np.maximum(.85, np.sin(x + x ** 2)) - x / 20
+        func = np.maximum(.85, np.sin(x + x ** 2)) - x / 20
     elif opt == 9:
-        return -x - x ** 2 + np.exp(-(30 * (x - .47)) ** 2)
+        func = -x - x ** 2 + np.exp(-(30 * (x - .47)) ** 2)
+    return np.sum(func, axis=1)
 
 
 # set a function f, such as f = chebfun('sqrt(abs(x-3))',[0,4],'splitting','on');
 # generate data samples from function f, [input, output]
 def generate_samples(DATA_NUM=1000, low=low_border, hi=hi_border):
-    x_all = (hi - low) * np.random.random_sample((DATA_NUM, 1)) + low
+    x_all = (hi - low) * np.random.random_sample((DATA_NUM, 2)) + low
     y_all = f(x_all)
 
     train_rate = 0.7
@@ -236,7 +238,7 @@ if __name__ == '__main__':
     plt.plot(t1, y_poly_pred, 'y--')
 
     plt.subplot(413)
-    plt.plot(t1, cy_poly_pred, 'go--')
+    plt.plot(t1, cy_poly_pred, 'g--')
 
     plt.subplot(414)
     plt.plot(t_pred, y_pred, 'r--')
