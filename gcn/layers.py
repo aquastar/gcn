@@ -230,29 +230,36 @@ class GraphConvolution_Rational(Layer):
     def _call(self, inputs):
         # shape: [input #, input_dim]
         x = inputs
+        output = None
 
-        # dropout
-        if self.sparse_inputs:
-            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
-        else:
-            x = tf.nn.dropout(x, 1 - self.dropout)
+        with tf.name_scope("layer_droput"):
+            # dropout
+            if self.sparse_inputs:
+                x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
+            else:
+                x = tf.nn.dropout(x, 1 - self.dropout)
 
         # rational convole
         pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
 
         supports_no = list()
         supports_de = list()
-        for i in range(len(self.support)):
-            sup = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
-            supports_no.append(sup)
-            sup = dot(self.support[i], self.vars['weights_' + str(i + len(self.support))],
-                      sparse=True)
-            supports_de.append(sup)
 
-        output_no = tf.add_n(supports_no)
-        output_de = tf.add_n(supports_de)
-        pre_left = dot(output_no, tf.matrix_inverse(output_de))
-        output = dot(pre_left, pre_right)
+        with tf.name_scope("output_append"):
+            for i in range(len(self.support)):
+                sup = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
+                supports_no.append(sup)
+                sup = dot(self.support[i], self.vars['weights_' + str(i + len(self.support))],
+                          sparse=True)
+                supports_de.append(sup)
+
+        with tf.name_scope("output_add_n"):
+            output_no = tf.add_n(supports_no)
+            output_de = tf.add_n(supports_de)
+
+        with tf.name_scope("output_div"):
+            pre_left = dot(output_no, tf.matrix_inverse(output_de))
+            output = dot(pre_left, pre_right)
 
         # bias
         if self.bias:
