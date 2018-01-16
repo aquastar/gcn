@@ -19,7 +19,7 @@ def sample_mask(idx, l):
     return np.array(mask, dtype=np.bool)
 
 
-def f(x, opt=8):
+def f(x, opt=9):
     if opt == 1:
         return np.sqrt(abs(x - 3))
     elif opt == 2:
@@ -227,18 +227,36 @@ if __name__ == '__main__':
     t_pred = t_pred[t_pred_ind]
     y_pred = np.squeeze(y_test[test_mask])[t_pred_ind]
 
-    plt.figure(1)
+    # plt.figure(1)
 
-    plt.subplot(411)
-    plt.plot(t1, f(t1), 'b--')
+    # plt.subplot(411)
+    # plt.plot(t1, f(t1), 'b--')
+    #
+    # plt.subplot(412)
+    # plt.plot(t1, y_poly_pred, 'y--')
+    #
+    # plt.subplot(413)
+    # plt.plot(t1, cy_poly_pred, 'g--')
+    #
+    # plt.subplot(414)
+    # plt.plot(t_pred, y_pred, 'r--')
 
-    plt.subplot(412)
-    plt.plot(t1, y_poly_pred, 'y--')
+    _, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex=True, sharey=True)
+    # l1, = ax1.plot(t1, f(t1), 'b--')
+    # l2, = ax2.plot(t1, y_poly_pred, 'y--')
+    # l3, = ax3.plot(t1, cy_poly_pred, 'g--')
+    # l4, = ax4.plot(t_pred, y_pred, 'r--')
+    # plt.legend([l1, l2, l3, l4], ["func", "poly", "cheby", "rat"])
 
-    plt.subplot(413)
-    plt.plot(t1, cy_poly_pred, 'g--')
+    ax1.plot(t1, f(t1), 'b--', label='func')
+    ax1.legend(loc="upper right")
+    ax2.plot(t1, y_poly_pred, 'y--',label='poly')
+    ax2.legend(loc="upper right")
+    ax3.plot(t1, cy_poly_pred, 'g--',label='cheby')
+    ax3.legend(loc="upper right")
+    ax4.plot(t_pred, y_pred, 'r--',label='rat')
+    ax4.legend(loc="upper right")
 
-    plt.subplot(414)
-    plt.plot(t_pred, y_pred, 'r--')
+    ax1.set_title('approximation')
 
     plt.show()

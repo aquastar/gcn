@@ -1,3 +1,5 @@
+import collections
+
 from gcn.layers import *
 from gcn.metrics import *
 
@@ -176,6 +178,63 @@ class GCN(Model):
         return tf.nn.softmax(self.outputs)
 
 
+class RAT_after_GCN(Model):
+    def __init__(self, placeholders, input_dim, gcn, support_inv, **kwargs):
+        super(RAT_after_GCN, self).__init__(**kwargs)
+
+        self.vars = [[], []]
+        od = collections.OrderedDict(sorted(gcn.vars.items()))
+        for i, (k, v) in enumerate(od.items()):
+            self.vars[i / (FLAGS.max_degree + 1)].append(v)
+        self.support_inv = support_inv
+
+        self.inputs = placeholders['features']
+        self.input_dim = input_dim
+        # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions
+        self.output_dim = placeholders['labels'].get_shape().as_list()[1]
+        self.placeholders = placeholders
+
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+
+        self.build()
+
+    def _loss(self):
+        # Weight decay loss
+        for var in self.layers[0].vars.values():
+            self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
+
+        # Cross entropy error
+        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
+                                                  self.placeholders['labels_mask'])
+
+    def _accuracy(self):
+        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
+                                        self.placeholders['labels_mask'])
+
+    def _build(self):
+        self.layers.append(GraphConvolution_after_gcn(input_dim=self.input_dim,
+                                                      output_dim=FLAGS.hidden1,
+                                                      placeholders=self.placeholders,
+                                                      act=tf.nn.relu,
+                                                      dropout=True,
+                                                      sparse_inputs=True,
+                                                      gcn_var=self.vars[0],
+                                                      support_inv=self.support_inv,
+                                                      logging=self.logging))
+
+        self.layers.append(GraphConvolution_after_gcn(input_dim=FLAGS.hidden1,
+                                                      output_dim=self.output_dim,
+                                                      placeholders=self.placeholders,
+                                                      act=lambda x: x,
+                                                      dropout=True,
+                                                      gcn_var=self.vars[1],
+                                                      support_inv=self.support_inv,
+                                                      logging=self.logging))
+
+    def predict(self):
+        return tf.nn.softmax(self.outputs)
+
+
 class RAT(Model):
     def __init__(self, placeholders, input_dim, **kwargs):
         super(RAT, self).__init__(**kwargs)
@@ -204,20 +263,67 @@ class RAT(Model):
                                         self.placeholders['labels_mask'])
 
     def _build(self):
-        self.layers.append(GraphConvolution_Rational(input_dim=self.input_dim,
-                                                         output_dim=FLAGS.hidden1,
-                                                         placeholders=self.placeholders,
-                                                         act=tf.nn.relu,
-                                                         dropout=True,
-                                                         sparse_inputs=True,
-                                                         logging=self.logging))
+        self.layers.append(GraphConvolution_rat_test(input_dim=self.input_dim,
+                                                     output_dim=FLAGS.hidden1,
+                                                     placeholders=self.placeholders,
+                                                     act=tf.nn.relu,
+                                                     dropout=True,
+                                                     sparse_inputs=True,
+                                                     logging=self.logging))
 
-        self.layers.append(GraphConvolution_Rational(input_dim=FLAGS.hidden1,
-                                                         output_dim=self.output_dim,
-                                                         placeholders=self.placeholders,
-                                                         act=lambda x: x,
-                                                         dropout=True,
-                                                         logging=self.logging))
+        self.layers.append(GraphConvolution_rat_test(input_dim=FLAGS.hidden1,
+                                                     output_dim=self.output_dim,
+                                                     placeholders=self.placeholders,
+                                                     act=lambda x: x,
+                                                     dropout=True,
+                                                     logging=self.logging))
+
+    def predict(self):
+        return tf.nn.softmax(self.outputs)
+
+
+class RAT_ELEMENT(Model):
+    def __init__(self, placeholders, input_dim, **kwargs):
+        super(RAT_ELEMENT, self).__init__(**kwargs)
+
+        self.inputs = placeholders['features']
+        self.input_dim = input_dim
+        # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions
+        self.output_dim = placeholders['labels'].get_shape().as_list()[1]
+        self.placeholders = placeholders
+
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+
+        self.build()
+
+    def _loss(self):
+        # Weight decay loss
+        for var in self.layers[0].vars.values():
+            self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
+
+        # Cross entropy error
+        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
+                                                  self.placeholders['labels_mask'])
+
+    def _accuracy(self):
+        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
+                                        self.placeholders['labels_mask'])
+
+    def _build(self):
+        self.layers.append(GraphConvolution_Rational_Element(input_dim=self.input_dim,
+                                                             output_dim=FLAGS.hidden1,
+                                                             placeholders=self.placeholders,
+                                                             act=tf.nn.relu,
+                                                             dropout=True,
+                                                             sparse_inputs=True,
+                                                             logging=self.logging))
+
+        self.layers.append(GraphConvolution_Rational_Element(input_dim=FLAGS.hidden1,
+                                                             output_dim=self.output_dim,
+                                                             placeholders=self.placeholders,
+                                                             act=lambda x: x,
+                                                             dropout=True,
+                                                             logging=self.logging))
 
     def predict(self):
         return tf.nn.softmax(self.outputs)

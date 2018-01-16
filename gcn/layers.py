@@ -1,11 +1,9 @@
-from tensorflow.contrib import slim
-
 from gcn.inits import *
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-from gen_simulate import FEAT_NUM, CLASS_NUM, DATA_NUM
+from gen_simulate import DATA_NUM
 
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}
@@ -193,6 +191,154 @@ class GraphConvolution(Layer):
         return self.act(output)
 
 
+class GraphConvolution_after_gcn(Layer):
+    """Graph convolution layer."""
+
+    def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
+                 sparse_inputs=False, act=tf.nn.relu, bias=False,
+                 featureless=False, gcn_var=None, support_inv=None, **kwargs):
+        super(GraphConvolution_after_gcn, self).__init__(**kwargs)
+
+        if dropout:
+            self.dropout = placeholders['dropout']
+        else:
+            self.dropout = 0.
+
+        self.act = act
+        self.support = placeholders['support']
+        self.support_inv = placeholders['support_inv']
+        self.sparse_inputs = sparse_inputs
+        self.featureless = featureless
+        self.bias = bias
+
+        # helper variable for sparse dropout
+        self.num_features_nonzero = placeholders['num_features_nonzero']
+
+        with tf.variable_scope(self.name + '_vars'):
+            for i in range(len(self.support)):
+                self.vars['weights_' + str(i)] = tf.Variable(gcn_var[i], name='weights_' + str(i))
+            for i in range(len(self.support)):
+                self.vars['weights_de_' + str(i)] = tf.Variable(np.array(support_inv[0].toarray(), dtype=np.float32),
+                                                                name='weights_de_' + str(i))
+            if self.bias:
+                self.vars['bias'] = zeros([output_dim], name='bias')
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        x = inputs
+
+        # dropout
+        if self.sparse_inputs:
+            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
+        else:
+            x = tf.nn.dropout(x, 1 - self.dropout)
+
+        # convolve
+        supports = list()
+        supports_de = list()
+        for i in range(len(self.support)):
+            if not self.featureless:
+                pre_sup = dot(x, self.vars['weights_' + str(i)], sparse=self.sparse_inputs)
+            else:
+                pre_sup = self.vars['weights_' + str(i)]
+            # self.vars['weights_' + str(i)] = tf.Print(self.vars['weights_' + str(i)],
+            #                                           [self.vars['weights_' + str(i)]],
+            #                                           message="after gcn:" + str(self.info) + '-' + str(i))
+            support = dot(self.support[i], pre_sup, sparse=True)
+            support_de = dot(self.support[i], self.vars['weights_de_' + str(i)], sparse=True)
+            supports.append(support)
+            supports_de.append(support_de)
+
+        output = tf.add_n(supports)
+        output_de = tf.add_n(supports_de)
+
+
+        output = dot(tf.py_func(np.linalg.pinv, [output_de], tf.float32), output)
+
+        # bias
+        if self.bias:
+            output += self.vars['bias']
+
+        return self.act(output)
+
+
+class GraphConvolution_rat_test(Layer):
+    """Graph convolution layer."""
+
+    def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
+                 sparse_inputs=False, act=tf.nn.relu, bias=False,
+                 featureless=False, **kwargs):
+        super(GraphConvolution_rat_test, self).__init__(**kwargs)
+
+        if dropout:
+            self.dropout = placeholders['dropout']
+        else:
+            self.dropout = 0.
+
+        self.act = act
+        self.support = placeholders['support']
+        self.sparse_inputs = sparse_inputs
+        self.featureless = featureless
+        self.bias = bias
+
+        # helper variable for sparse dropout
+        self.num_features_nonzero = placeholders['num_features_nonzero']
+
+        with tf.variable_scope(self.name + '_vars'):
+            for i in range(len(self.support)):
+                self.vars['weights_' + str(i)] = glorot([DATA_NUM, DATA_NUM], name='weights_' + str(i))
+            for i in range(len(self.support)):
+                self.vars['weights_de_' + str(i)] = glorot([DATA_NUM, DATA_NUM], name='weights_de_' + str(i))
+
+            self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
+
+            if self.bias:
+                self.vars['bias'] = zeros([output_dim], name='bias')
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        x = inputs
+
+        # dropout
+        if self.sparse_inputs:
+            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
+        else:
+            x = tf.nn.dropout(x, 1 - self.dropout)
+
+        # convolve
+        supports = list()
+        supports_de = list()
+        for i in range(len(self.support)):
+            # if not self.featureless:
+            #     pre_sup = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
+            # else:
+            #     pre_sup = self.vars['weights_uni' + str(i)]
+
+            # pre_sup_de = self.vars['weights_de_' + str(i)]
+
+            support = dot(self.support[i], self.vars['weights_' + str(i)], sparse=True)
+            support_de = dot(self.support[i], self.vars['weights_de_' + str(i)], sparse=True)
+            supports.append(support)
+            supports_de.append(support_de)
+        output = tf.add_n(supports)
+        output_de = tf.add_n(supports_de)
+        output = tf.div(output, output_de)
+
+        pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
+        output = dot(output, pre_right)
+        # output = dot(output_de, output)
+
+        # bias
+        if self.bias:
+            output += self.vars['bias']
+
+        return self.act(output)
+
+
 class GraphConvolution_Rational(Layer):
     """Graph convolution Rational layer."""
 
@@ -260,6 +406,107 @@ class GraphConvolution_Rational(Layer):
         with tf.name_scope("output_div"):
             pre_left = dot(output_no, tf.matrix_inverse(output_de))
             output = dot(pre_left, pre_right)
+
+        # bias
+        if self.bias:
+            output += self.vars['bias']
+
+        # try norm_batch
+        # bn = tf.layers.batch_normalization(output,axis=1,center=True,scale=False)
+        # output = slim.batch_norm(output, is_training=True)
+
+        return self.act(output)
+
+
+class GraphConvolution_Rational_Element(Layer):
+    """Graph convolution Rational layer."""
+
+    def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
+                 sparse_inputs=False, act=tf.nn.relu, bias=False,
+                 featureless=False, **kwargs):
+        super(GraphConvolution_Rational_Element, self).__init__(**kwargs)
+
+        if dropout:
+            self.dropout = placeholders['dropout']
+        else:
+            self.dropout = 0.
+
+        self.act = act
+        self.support = placeholders['support']
+        self.eigen_vec = placeholders['eigen_vec']
+        self.sparse_inputs = sparse_inputs
+        self.featureless = featureless
+        self.bias = bias
+
+        # helper variable for sparse dropout
+        self.num_features_nonzero = placeholders['num_features_nonzero']
+
+        with tf.variable_scope(self.name + '_vars'):
+            for i in range(len(self.support)):
+                self.vars['weights_' + str(i)] = random_normal([1, FLAGS.eig_dim], name='weights_' + str(i))
+            for i in range(len(self.support)):
+                self.vars['weights_de' + str(i)] = random_normal([1, FLAGS.eig_dim], name='weights_de' + str(i))
+
+            self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
+
+            if self.bias:
+                self.vars['bias'] = zeros([output_dim], name='bias')
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        # shape: [input #, input_dim]
+        x = inputs
+
+        with tf.name_scope("layer_droput"):
+            # dropout
+            if self.sparse_inputs:
+                x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
+            else:
+                x = tf.nn.dropout(x, 1 - self.dropout)
+
+        # rational convole
+        pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
+        # pre_right = tf.Print(pre_right, [pre_right], message="val: ")
+
+        supports_no = list()
+        supports_de = list()
+
+        for i in range(len(self.support)):
+            sup = tf.multiply(self.support[i], self.vars['weights_' + str(i)])
+            supports_no.append(sup)
+        for i in range(len(self.support)):
+            sup = tf.multiply(self.support[i], self.vars['weights_de' + str(i)])
+            supports_de.append(sup)
+
+        # supports_no = tf.Print(supports_no, [supports_no], message="supports_no: ")
+        # supports_de = tf.Print(supports_de, [supports_de[0][0], supports_de[1][0], supports_de[2][0], supports_de[3][0]], message="supports_de: ")
+
+        # element wise addition and division, get estimated function of eigenvalues
+        output_no = tf.add_n(supports_no)
+        # output_no = tf.Print(output_no, [output_no, tf.shape(output_no)], message="output_no: ")
+
+        output_de = tf.add_n(supports_de)
+        # output_de = tf.Print(output_de, [output_de, tf.shape(output_de)], message="output_de: ")
+
+        output = tf.div(output_no, output_de)[0]
+        # output = tf.Print(output, [output, tf.diag(output)[0][0], tf.diag(output)[1][1]], message="output: ")
+
+        # multiply U and U^t, get estimated function of laplacian graph
+        # self.eigen_vec = tf.Print(self.eigen_vec, [self.eigen_vec, tf.transpose(self.eigen_vec), tf.shape(self.eigen_vec)], message="self.eigen_vec: ")
+        # output = tf.Print(output, [output], message="before pre_left: ")
+
+        pre_left = dot(self.eigen_vec, tf.diag(output))
+        # pre_left = tf.Print(pre_left, [pre_left, tf.shape(pre_left)], message="left pre_left: ")
+
+        pre_left = dot(pre_left, tf.transpose(self.eigen_vec))
+        # pre_left = tf.Print(pre_left, [pre_left, tf.shape(pre_left)], message="after pre_left: ")
+
+        # pre_right = tf.Print(pre_right, [tf.shape(pre_right), tf.shape(pre_left)], message="This is a: ")
+
+        # multiply feat x and parameters for going next layer
+        output = dot(pre_left, pre_right)
 
         # bias
         if self.bias:
