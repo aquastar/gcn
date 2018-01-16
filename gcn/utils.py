@@ -1,11 +1,11 @@
-import numpy as np
 import pickle as pkl
+import sys
+
 import networkx as nx
+import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import inv
 from scipy.sparse.linalg.eigen.arpack import eigsh
-import sys
-import collections
 
 from gcn.gen_simulate import graph_forge
 
@@ -130,8 +130,21 @@ def preprocess_adj(adj):
     return sparse_to_tuple(adj_normalized)
 
 
-def construct_feed_dict(features, support, labels, labels_mask, placeholders):
+def construct_feed_dict(features, support, labels, labels_mask, placeholders, approx_eigen=False, support_inv=None):
     """Construct feed dictionary."""
+
+    if approx_eigen:
+        feed_dict = dict()
+        feed_dict.update({placeholders['labels']: labels})
+        feed_dict.update({placeholders['labels_mask']: labels_mask})
+        feed_dict.update({placeholders['features']: features})
+        feed_dict.update({placeholders['support'][i]: support[i] for i in range(len(support))})
+        # feed_dict.update({placeholders['support_inv'][i]: support_inv[i] for i in range(len(support_inv))})
+        # feed_dict.update({placeholders['eigen_vec']: support[1]})
+        feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
+
+        return feed_dict
+
     feed_dict = dict()
     feed_dict.update({placeholders['labels']: labels})
     feed_dict.update({placeholders['labels_mask']: labels_mask})
@@ -158,10 +171,33 @@ def chebyshev_polynomials(adj, k):
         s_lap = sp.csr_matrix(scaled_lap, copy=True)
         return 2 * s_lap.dot(t_k_minus_one) - t_k_minus_two
 
-    for i in range(2, k + 1):
+    for i in range(2, k+1):
         t_k.append(chebyshev_recurrence(t_k[-1], t_k[-2], scaled_laplacian))
 
     return sparse_to_tuple(t_k)
+
+
+def chebyshev_polynomials_inv(adj, k):
+    """Calculate rational up to order of k. Return a list of sparse matrices"""
+    print("Calculating rational approximation up to order {}...".format(k))
+
+    adj_normalized = normalize_adj(adj)
+    laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+    scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
+
+    t_k = list()
+    t_k.append(sp.eye(adj.shape[0]))
+    t_k.append(scaled_laplacian)
+
+    def chebyshev_recurrence(t_k_minus_one, t_k_minus_two, scaled_lap):
+        s_lap = sp.csr_matrix(scaled_lap, copy=True)
+        return 2 * s_lap.dot(t_k_minus_one) - t_k_minus_two
+
+    for i in range(2, k + 1):
+        t_k.append(chebyshev_recurrence(t_k[-1], t_k[-2], scaled_laplacian))
+
+    return [inv(_) for _ in t_k]
 
 
 def chebyshev_rational(adj, k):
@@ -207,6 +243,29 @@ def normal_rational(adj, k):
         t_k.append(normal_recurrence(scaled_laplacian, i))
 
     return sparse_to_tuple(t_k)
+
+
+def element_rational(adj, k, eig_dim):
+    """Calculate rational up to order of k. Return a list of sparse matrices"""
+    print("Calculating rational approximation up to order {}...".format(k))
+
+    eigen_dim = eig_dim
+    adj_normalized = normalize_adj(adj)
+    laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    eigen_val, eigen_vec = eigsh(laplacian, eigen_dim, which='LM')
+    # scaled_laplacian = (2. / largest_eigval[-1]) * laplacian - sp.eye(adj.shape[0])
+
+    t_k = list()
+    t_k.append(np.ones(eigen_dim))
+    t_k.append(eigen_val)
+
+    def normal_recurrence(scaled_lap, k):
+        return np.power(scaled_lap, k)
+
+    for i in range(2, k + 1):
+        t_k.append(normal_recurrence(eigen_val, i))
+
+    return [t_k, eigen_vec]
 
 
 def pfd_rational(adj, k):
