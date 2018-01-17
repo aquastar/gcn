@@ -32,9 +32,9 @@ from scipy.sparse import lil_matrix
 # 5, feat: related to label; graph: An oracle
 ################################################
 
-FEAT_NUM = 50
-CLASS_NUM = 5
-DATA_NUM = 500
+FEAT_NUM = 10
+CLASS_NUM = 4
+DATA_NUM = 1000
 HI_MEAN = [5, 10]
 LO_MEAN = [-10, 5]
 HI_CVAR = [0, 5]
