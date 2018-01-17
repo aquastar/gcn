@@ -194,7 +194,7 @@ class RAT_after_GCN(Model):
         self.output_dim = placeholders['labels'].get_shape().as_list()[1]
         self.placeholders = placeholders
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate*0.01)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
         # self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
 
         self.build()
