@@ -196,8 +196,10 @@ class GraphConvolution_after_gcn(Layer):
 
     def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
                  sparse_inputs=False, act=tf.nn.relu, bias=False,
-                 featureless=False, gcn_var=None, support_inv=None, **kwargs):
+                 featureless=False, gcn_var=None, support_inv=None,lay_no=-1, **kwargs):
         super(GraphConvolution_after_gcn, self).__init__(**kwargs)
+
+        self.lay_no=lay_no
 
         if dropout:
             self.dropout = placeholders['dropout']
@@ -219,7 +221,7 @@ class GraphConvolution_after_gcn(Layer):
                 self.vars['weights_' + str(i)] = tf.Variable(gcn_var[i], name='weights_' + str(i))
             for i in range(len(self.support)):
                 self.vars['weights_de_' + str(i)] = tf.Variable(
-                    np.array(support_inv[0].toarray() * (1 / FLAGS.max_degree + 1), dtype=np.float32),
+                    np.array(support_inv[i].toarray(), dtype=np.float32),
                     name='weights_de_' + str(i))
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
@@ -244,16 +246,20 @@ class GraphConvolution_after_gcn(Layer):
                 pre_sup = dot(x, self.vars['weights_' + str(i)], sparse=self.sparse_inputs)
             else:
                 pre_sup = self.vars['weights_' + str(i)]
-            # self.vars['weights_' + str(i)] = tf.Print(self.vars['weights_' + str(i)],
-            #                                           [self.vars['weights_' + str(i)]],
-            #                                           message="after gcn:" + str(self.info) + '-' + str(i))
             support = dot(self.support[i], pre_sup, sparse=True)
             support_de = dot(self.support[i], self.vars['weights_de_' + str(i)], sparse=True)
+            # support_de = tf.Print(support_de, [support_de], message=str(self.lay_no)+",support_de_" + str(i))
             supports.append(support)
             supports_de.append(support_de)
 
         output = tf.add_n(supports)
         output_de = tf.add_n(supports_de)
+
+        # output_de = tf.Print(output_de, [output_de], message=str(self.lay_no)+"output_de:")
+
+        # output_de = tf.add(output_de, tf.constant(tf.eye(tf.shape(output_de) * 0.000001)))
+        # output_de = tf.matrix_inverse(output_de, adjoint=None, name=None)
+        # output = dot(output_de, output)
 
         output = dot(tf.py_func(np.linalg.pinv, [output_de], tf.float32), output)
 

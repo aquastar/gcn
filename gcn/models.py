@@ -194,7 +194,8 @@ class RAT_after_GCN(Model):
         self.output_dim = placeholders['labels'].get_shape().as_list()[1]
         self.placeholders = placeholders
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate*0.01)
+        # self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
 
         self.build()
 
@@ -220,6 +221,7 @@ class RAT_after_GCN(Model):
                                                       sparse_inputs=True,
                                                       gcn_var=self.vars[0],
                                                       support_inv=self.support_inv,
+                                                      lay_no=1,
                                                       logging=self.logging))
 
         self.layers.append(GraphConvolution_after_gcn(input_dim=FLAGS.hidden1,
@@ -229,6 +231,7 @@ class RAT_after_GCN(Model):
                                                       dropout=True,
                                                       gcn_var=self.vars[1],
                                                       support_inv=self.support_inv,
+                                                      lay_no=2,
                                                       logging=self.logging))
 
     def predict(self):
