@@ -218,8 +218,9 @@ class GraphConvolution_after_gcn(Layer):
             for i in range(len(self.support)):
                 self.vars['weights_' + str(i)] = tf.Variable(gcn_var[i], name='weights_' + str(i))
             for i in range(len(self.support)):
-                self.vars['weights_de_' + str(i)] = tf.Variable(np.array(support_inv[0].toarray(), dtype=np.float32),
-                                                                name='weights_de_' + str(i))
+                self.vars['weights_de_' + str(i)] = tf.Variable(
+                    np.array(support_inv[0].toarray() * (1 / FLAGS.max_degree + 1), dtype=np.float32),
+                    name='weights_de_' + str(i))
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
 
@@ -253,7 +254,6 @@ class GraphConvolution_after_gcn(Layer):
 
         output = tf.add_n(supports)
         output_de = tf.add_n(supports_de)
-
 
         output = dot(tf.py_func(np.linalg.pinv, [output_de], tf.float32), output)
 
