@@ -221,7 +221,7 @@ class GraphConvolution_after_gcn(Layer):
                 self.vars['weights_' + str(i)] = tf.Variable(gcn_var[i], name='weights_' + str(i))
             for i in range(len(self.support)):
                 self.vars['weights_de_' + str(i)] = tf.Variable(
-                    np.array(support_inv[i].toarray(), dtype=np.float32),
+                    np.array(support_inv[i].toarray()/(FLAGS.max_degree+1), dtype=np.float32),
                     name='weights_de_' + str(i))
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
@@ -255,7 +255,7 @@ class GraphConvolution_after_gcn(Layer):
         output = tf.add_n(supports)
         output_de = tf.add_n(supports_de)
 
-        # output_de = tf.Print(output_de, [output_de], message=str(self.lay_no)+"output_de:")
+        output_de = tf.Print(output_de, [output_de], message=str(self.lay_no)+"output_de:")
 
         # output_de = tf.add(output_de, tf.constant(tf.eye(tf.shape(output_de) * 0.000001)))
         # output_de = tf.matrix_inverse(output_de, adjoint=None, name=None)

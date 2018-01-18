@@ -102,7 +102,7 @@ if __name__ == '__main__':
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('dataset', 'pubmed', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed', 'simu'
+    flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed', 'simu'
     flags.DEFINE_string('model', 'gcn_cheby', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
     flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
     flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')
