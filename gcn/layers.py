@@ -196,10 +196,10 @@ class GraphConvolution_after_gcn(Layer):
 
     def __init__(self, input_dim, output_dim, placeholders, dropout=0.,
                  sparse_inputs=False, act=tf.nn.relu, bias=False,
-                 featureless=False, gcn_var=None, support_inv=None,lay_no=-1, **kwargs):
+                 featureless=False, gcn_var=None, support_inv=None, lay_no=-1, **kwargs):
         super(GraphConvolution_after_gcn, self).__init__(**kwargs)
 
-        self.lay_no=lay_no
+        self.lay_no = lay_no
 
         if dropout:
             self.dropout = placeholders['dropout']
@@ -221,7 +221,7 @@ class GraphConvolution_after_gcn(Layer):
                 self.vars['weights_' + str(i)] = tf.Variable(gcn_var[i], name='weights_' + str(i))
             for i in range(len(self.support)):
                 self.vars['weights_de_' + str(i)] = tf.Variable(
-                    np.array(support_inv[i].toarray()/(FLAGS.max_degree+1), dtype=np.float32),
+                    np.array(support_inv[i].toarray() / (FLAGS.max_degree + 1), dtype=np.float32),
                     name='weights_de_' + str(i))
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
@@ -255,7 +255,7 @@ class GraphConvolution_after_gcn(Layer):
         output = tf.add_n(supports)
         output_de = tf.add_n(supports_de)
 
-        output_de = tf.Print(output_de, [output_de], message=str(self.lay_no)+"output_de:")
+        output_de = tf.Print(output_de, [output_de], message=str(self.lay_no) + "output_de:")
 
         # output_de = tf.add(output_de, tf.constant(tf.eye(tf.shape(output_de) * 0.000001)))
         # output_de = tf.matrix_inverse(output_de, adjoint=None, name=None)
@@ -448,10 +448,8 @@ class GraphConvolution_Rational_Element(Layer):
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
         with tf.variable_scope(self.name + '_vars'):
-            for i in range(len(self.support)):
-                self.vars['weights_' + str(i)] = random_normal([1, FLAGS.eig_dim], name='weights_' + str(i))
-            for i in range(len(self.support)):
-                self.vars['weights_de' + str(i)] = random_normal([1, FLAGS.eig_dim], name='weights_de' + str(i))
+            self.vars['weights'] = random_normal([FLAGS.max_degree + 1, FLAGS.eig_dim], name='weights')
+            self.vars['weights_de'] = random_normal([FLAGS.max_degree + 1, FLAGS.eig_dim], name='weights_de')
 
             self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
 
@@ -472,38 +470,26 @@ class GraphConvolution_Rational_Element(Layer):
             else:
                 x = tf.nn.dropout(x, 1 - self.dropout)
 
-        # rational convole
+        # rational convolution
         pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
         # pre_right = tf.Print(pre_right, [pre_right], message="val: ")
 
-        supports_no = list()
-        supports_de = list()
+        # calculate element wise eigenvalue approximation
+        # g(lambda) = diag(P(lambda_1)/Q(lambda_1), P(lambda_2)/Q(lambda_2)...)
 
-        for i in range(len(self.support)):
-            sup = tf.multiply(self.support[i], self.vars['weights_' + str(i)])
-            supports_no.append(sup)
-        for i in range(len(self.support)):
-            sup = tf.multiply(self.support[i], self.vars['weights_de' + str(i)])
-            supports_de.append(sup)
+        sup = tf.multiply(self.support, self.vars['weights'])
+        sup = tf.reduce_sum(sup, 0)
 
-        # supports_no = tf.Print(supports_no, [supports_no], message="supports_no: ")
-        # supports_de = tf.Print(supports_de, [supports_de[0][0], supports_de[1][0], supports_de[2][0], supports_de[3][0]], message="supports_de: ")
+        sup_de = tf.multiply(self.support, self.vars['weights_de'])
+        sup_de = tf.reduce_sum(sup_de, 0)
 
-        # element wise addition and division, get estimated function of eigenvalues
-        output_no = tf.add_n(supports_no)
-        # output_no = tf.Print(output_no, [output_no, tf.shape(output_no)], message="output_no: ")
-
-        output_de = tf.add_n(supports_de)
-        # output_de = tf.Print(output_de, [output_de, tf.shape(output_de)], message="output_de: ")
-
-        output = tf.div(output_no, output_de)[0]
-        # output = tf.Print(output, [output, tf.diag(output)[0][0], tf.diag(output)[1][1]], message="output: ")
+        eigen_val = tf.div(sup, sup_de)
 
         # multiply U and U^t, get estimated function of laplacian graph
         # self.eigen_vec = tf.Print(self.eigen_vec, [self.eigen_vec, tf.transpose(self.eigen_vec), tf.shape(self.eigen_vec)], message="self.eigen_vec: ")
         # output = tf.Print(output, [output], message="before pre_left: ")
 
-        pre_left = dot(self.eigen_vec, tf.diag(output))
+        pre_left = dot(self.eigen_vec, tf.diag(eigen_val))
         # pre_left = tf.Print(pre_left, [pre_left, tf.shape(pre_left)], message="left pre_left: ")
 
         pre_left = dot(pre_left, tf.transpose(self.eigen_vec))

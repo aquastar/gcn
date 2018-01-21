@@ -102,8 +102,8 @@ if __name__ == '__main__':
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed', 'simu'
-    flags.DEFINE_string('model', 'gcn_cheby', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
+    flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed', 'simu'
+    flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
     flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
     flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
     flags.DEFINE_integer('early_stopping', 50, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')
-    flags.DEFINE_integer('eig_dim', 400, 'Maximum eigen value number.')
+    flags.DEFINE_integer('eig_dim', 499, 'Maximum eigen value number.')
 
     # Load data
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)
@@ -159,23 +159,25 @@ if __name__ == '__main__':
     placeholders = dict()
     if not approx_eigen:
         placeholders = {
-            'support': [tf.sparse_placeholder(tf.float32) for _ in range(num_supports)],
-            'features': tf.sparse_placeholder(tf.float32, shape=tf.constant(features[2], dtype=tf.int64)),
-            'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1])),
-            'labels_mask': tf.placeholder(tf.int32),
+            'support': [tf.sparse_placeholder(tf.float32, name='support') for _ in range(num_supports)],
+            'features': tf.sparse_placeholder(tf.float32, shape=tf.constant(features[2], dtype=tf.int64, name='feat')),
+            'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1]), name='labels'),
+            'labels_mask': tf.placeholder(tf.int32, name='lables_mask'),
             'dropout': tf.placeholder_with_default(0., shape=()),
             'num_features_nonzero': tf.placeholder(tf.int32)  # helper variable for sparse dropout
         }
     else:
         placeholders = {
-            'support': [tf.sparse_placeholder(tf.float32) for _ in range(num_supports)],
-            'support_inv': [tf.sparse_placeholder(tf.float32) for _ in range(num_supports)],
-            # 'eigen_vec': tf.placeholder(tf.float32, shape=(None, FLAGS.eig_dim)),
-            'features': tf.sparse_placeholder(tf.float32, shape=tf.constant(features[2], dtype=tf.int64)),
-            'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1])),
-            'labels_mask': tf.placeholder(tf.int32),
-            'dropout': tf.placeholder_with_default(0., shape=()),
-            'num_features_nonzero': tf.placeholder(tf.int32)  # helper variable for sparse dropout
+            'support': tf.placeholder(tf.float32, shape=(FLAGS.max_degree + 1, FLAGS.eig_dim), name='support'),
+            # 'support': [tf.sparse_placeholder(tf.float32, name='support') for _ in range(num_supports)],
+            # 'support_inv': [tf.sparse_placeholder(tf.float32) for _ in range(num_supports)],
+            'eigen_vec': tf.placeholder(tf.float32, shape=(None, FLAGS.eig_dim), name='eigen_vec'),
+            'features': tf.sparse_placeholder(tf.float32, shape=tf.constant(features[2], dtype=tf.int64), name='feat'),
+            'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1]), name='labels'),
+            'labels_mask': tf.placeholder(tf.int32, name='labels_mask'),
+            'dropout': tf.placeholder_with_default(0., shape=(), name='dropout'),
+            'num_features_nonzero': tf.placeholder(tf.int32, name='num_feat_nzero')
+            # helper variable for sparse dropout
         }
 
     # Create model
@@ -201,14 +203,14 @@ if __name__ == '__main__':
 
         t = time.time()
         # Construct feed dictionary
-        feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders)
+        feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders, approx_eigen=approx_eigen)
         feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
         # Training step
         outs = sess.run([model.opt_op, model.loss, model.accuracy], feed_dict=feed_dict)
 
         # Validation
-        cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
+        cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders, approx_eigen=approx_eigen)
         cost_val.append(cost)
 
         # Print results
@@ -231,8 +233,9 @@ if __name__ == '__main__':
     # ################################
     # rational training after gcn
     # ################################
-    print('Start rational training...')
-    if True:
+    if False:
+        print('Start rational training...')
+
         rat_model = RAT_after_GCN(placeholders, input_dim=features[2][1], gcn=model, support_inv=support_inv,
                                   logging=True)
         model = rat_model
@@ -265,10 +268,10 @@ if __name__ == '__main__':
 
         print("Rational Optimization Finished!")
 
-    # Testing
+        # Testing
 
-    test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders,
-                                                      name=FLAGS.model,
-                                                      approx_eigen=approx_eigen)
-    print("Test set results:", "cost=", "{:.5f}".format(test_cost),
-          "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))
+        test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders,
+                                                          name=FLAGS.model,
+                                                          approx_eigen=approx_eigen)
+        print("Test set results:", "cost=", "{:.5f}".format(test_cost),
+              "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))
