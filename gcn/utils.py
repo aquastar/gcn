@@ -138,9 +138,10 @@ def construct_feed_dict(features, support, labels, labels_mask, placeholders, ap
         feed_dict.update({placeholders['labels']: labels})
         feed_dict.update({placeholders['labels_mask']: labels_mask})
         feed_dict.update({placeholders['features']: features})
-        feed_dict.update({placeholders['support'][i]: support[i] for i in range(len(support))})
+        feed_dict.update({placeholders['support']: support[0]})
+        # feed_dict.update({placeholders['support'][i]: support[0][i] for i in range(len(support[0]))})
         # feed_dict.update({placeholders['support_inv'][i]: support_inv[i] for i in range(len(support_inv))})
-        # feed_dict.update({placeholders['eigen_vec']: support[1]})
+        feed_dict.update({placeholders['eigen_vec']: support[1]})
         feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
 
         return feed_dict
@@ -265,7 +266,7 @@ def element_rational(adj, k, eig_dim):
     for i in range(2, k + 1):
         t_k.append(normal_recurrence(eigen_val, i))
 
-    return [t_k, eigen_vec]
+    return [np.array(t_k), eigen_vec]
 
 
 def pfd_rational(adj, k):

@@ -34,7 +34,7 @@ from scipy.sparse import lil_matrix
 
 FEAT_NUM = 10
 CLASS_NUM = 3
-DATA_NUM = 1000
+DATA_NUM = 500
 HI_MEAN = [5, 10]
 LO_MEAN = [-10, 5]
 HI_CVAR = [0, 5]
