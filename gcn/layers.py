@@ -208,7 +208,7 @@ class GraphConvolution_after_gcn(Layer):
 
         self.act = act
         self.support = placeholders['support']
-        self.support_inv = placeholders['support_inv']
+        # self.support_inv = placeholders['support_inv']
         self.sparse_inputs = sparse_inputs
         self.featureless = featureless
         self.bias = bias
@@ -219,10 +219,15 @@ class GraphConvolution_after_gcn(Layer):
         with tf.variable_scope(self.name + '_vars'):
             for i in range(len(self.support)):
                 self.vars['weights_' + str(i)] = tf.Variable(gcn_var[i], name='weights_' + str(i))
-            for i in range(len(self.support)):
-                self.vars['weights_de_' + str(i)] = tf.Variable(
-                    np.array(support_inv[i].toarray() / (FLAGS.max_degree + 1), dtype=np.float32),
-                    name='weights_de_' + str(i))
+            # for option 1
+            # for i in range(len(self.support)):
+            #     self.vars['weights_de_' + str(i)] = tf.Variable(
+            #         np.array(support_inv[i].toarray() / (FLAGS.max_degree + 1), dtype=np.float32),
+            #         name='weights_de_' + str(i))
+
+            # for option 2
+            self.vars['weights_de'] = glorot([DATA_NUM, DATA_NUM], name='weights_de')
+
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
 
@@ -247,21 +252,22 @@ class GraphConvolution_after_gcn(Layer):
             else:
                 pre_sup = self.vars['weights_' + str(i)]
             support = dot(self.support[i], pre_sup, sparse=True)
-            support_de = dot(self.support[i], self.vars['weights_de_' + str(i)], sparse=True)
-            # support_de = tf.Print(support_de, [support_de], message=str(self.lay_no)+",support_de_" + str(i))
             supports.append(support)
-            supports_de.append(support_de)
+
+            # Option 1
+            # support_de = dot(self.support[i], self.vars['weights_de_' + str(i)], sparse=True)
+            # supports_de.append(support_de)
 
         output = tf.add_n(supports)
-        output_de = tf.add_n(supports_de)
 
-        output_de = tf.Print(output_de, [output_de], message=str(self.lay_no) + "output_de:")
+        # Option 1
+        # output_de = tf.add_n(supports_de)
+        # output = dot(tf.py_func(np.linalg.pinv, [output_de], tf.float32), output)
 
-        # output_de = tf.add(output_de, tf.constant(tf.eye(tf.shape(output_de) * 0.000001)))
-        # output_de = tf.matrix_inverse(output_de, adjoint=None, name=None)
-        # output = dot(output_de, output)
-
-        output = dot(tf.py_func(np.linalg.pinv, [output_de], tf.float32), output)
+        # Option 2
+        output = dot(self.vars['weights_de'], output)
+        # self.vars['weights_de'] = tf.Print(self.vars['weights_de'], [self.vars['weights_de']],
+        #                                    message="self.vars['weights_de']:")
 
         # bias
         if self.bias:
@@ -410,7 +416,8 @@ class GraphConvolution_Rational(Layer):
             output_de = tf.add_n(supports_de)
 
         with tf.name_scope("output_div"):
-            pre_left = dot(output_no, tf.matrix_inverse(output_de))
+            # pre_left = dot(output_no, tf.matrix_inverse(output_de))
+            pre_left = tf.div(output_no, output_de)
             output = dot(pre_left, pre_right)
 
         # bias

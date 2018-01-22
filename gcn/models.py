@@ -186,7 +186,7 @@ class RAT_after_GCN(Model):
         od = collections.OrderedDict(sorted(gcn.vars.items()))
         for i, (k, v) in enumerate(od.items()):
             self.vars[i / (FLAGS.max_degree + 1)].append(v)
-        self.support_inv = support_inv
+        # self.support_inv = support_inv
 
         self.inputs = placeholders['features']
         self.input_dim = input_dim
@@ -220,7 +220,7 @@ class RAT_after_GCN(Model):
                                                       dropout=True,
                                                       sparse_inputs=True,
                                                       gcn_var=self.vars[0],
-                                                      support_inv=self.support_inv,
+                                                      # support_inv=self.support_inv,
                                                       lay_no=1,
                                                       logging=self.logging))
 
@@ -230,7 +230,7 @@ class RAT_after_GCN(Model):
                                                       act=lambda x: x,
                                                       dropout=True,
                                                       gcn_var=self.vars[1],
-                                                      support_inv=self.support_inv,
+                                                      # support_inv=self.support_inv,
                                                       lay_no=2,
                                                       logging=self.logging))
 

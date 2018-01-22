@@ -4,10 +4,14 @@ import sys
 import networkx as nx
 import numpy as np
 import scipy.sparse as sp
+import tensorflow as tf
 from scipy.sparse.linalg import inv
 from scipy.sparse.linalg.eigen.arpack import eigsh
 
 from gcn.gen_simulate import graph_forge
+
+flags = tf.app.flags
+FLAGS = flags.FLAGS
 
 
 def parse_index_file(filename):
@@ -130,28 +134,38 @@ def preprocess_adj(adj):
     return sparse_to_tuple(adj_normalized)
 
 
-def construct_feed_dict(features, support, labels, labels_mask, placeholders, approx_eigen=False, support_inv=None):
+def construct_feed_dict(features, support, labels, labels_mask, placeholders, support_inv=None, GCN_flag=False):
     """Construct feed dictionary."""
 
-    if approx_eigen:
-        feed_dict = dict()
+    feed_dict = dict()
+
+    if GCN_flag:
+        feed_dict.update({placeholders['labels']: labels})
+        feed_dict.update({placeholders['labels_mask']: labels_mask})
+        feed_dict.update({placeholders['features']: features})
+        feed_dict.update({placeholders['support'][i]: support[i] for i in range(len(support))})
+        feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
+    elif FLAGS.model == 'rat_pre_train':
+        feed_dict.update({placeholders['labels']: labels})
+        feed_dict.update({placeholders['labels_mask']: labels_mask})
+        feed_dict.update({placeholders['features']: features})
+        feed_dict.update({placeholders['support'][i]: support[i] for i in range(len(support))})
+        # feed_dict.update({placeholders['support_inv'][i]: support_inv[i] for i in range(len(support_inv))})
+        feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
+    elif FLAGS.model == 'rat_element':
         feed_dict.update({placeholders['labels']: labels})
         feed_dict.update({placeholders['labels_mask']: labels_mask})
         feed_dict.update({placeholders['features']: features})
         feed_dict.update({placeholders['support']: support[0]})
-        # feed_dict.update({placeholders['support'][i]: support[0][i] for i in range(len(support[0]))})
-        # feed_dict.update({placeholders['support_inv'][i]: support_inv[i] for i in range(len(support_inv))})
         feed_dict.update({placeholders['eigen_vec']: support[1]})
         feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
+    else:
+        feed_dict.update({placeholders['labels']: labels})
+        feed_dict.update({placeholders['labels_mask']: labels_mask})
+        feed_dict.update({placeholders['features']: features})
+        feed_dict.update({placeholders['support'][i]: support[i] for i in range(len(support))})
+        feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
 
-        return feed_dict
-
-    feed_dict = dict()
-    feed_dict.update({placeholders['labels']: labels})
-    feed_dict.update({placeholders['labels_mask']: labels_mask})
-    feed_dict.update({placeholders['features']: features})
-    feed_dict.update({placeholders['support'][i]: support[i] for i in range(len(support))})
-    feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
     return feed_dict
 
 
@@ -172,7 +186,7 @@ def chebyshev_polynomials(adj, k):
         s_lap = sp.csr_matrix(scaled_lap, copy=True)
         return 2 * s_lap.dot(t_k_minus_one) - t_k_minus_two
 
-    for i in range(2, k+1):
+    for i in range(2, k + 1):
         t_k.append(chebyshev_recurrence(t_k[-1], t_k[-2], scaled_laplacian))
 
     return sparse_to_tuple(t_k)
