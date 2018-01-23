@@ -455,8 +455,8 @@ class GraphConvolution_Rational_Element(Layer):
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
         with tf.variable_scope(self.name + '_vars'):
-            self.vars['weights'] = random_normal([FLAGS.max_degree + 1, FLAGS.eig_dim], name='weights')
-            self.vars['weights_de'] = random_normal([FLAGS.max_degree + 1, FLAGS.eig_dim], name='weights_de')
+            self.vars['weights'] = glorot([1, FLAGS.max_degree + 1], name='weights')
+            self.vars['weights_de'] = glorot([1, FLAGS.max_degree + 1], name='weights_de')
 
             self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
 
@@ -484,11 +484,11 @@ class GraphConvolution_Rational_Element(Layer):
         # calculate element wise eigenvalue approximation
         # g(lambda) = diag(P(lambda_1)/Q(lambda_1), P(lambda_2)/Q(lambda_2)...)
 
-        sup = tf.multiply(self.support, self.vars['weights'])
-        sup = tf.reduce_sum(sup, 0)
+        sup = tf.squeeze(dot(self.vars['weights'], self.support))
+        # sup = tf.reduce_sum(sup, 0)
 
-        sup_de = tf.multiply(self.support, self.vars['weights_de'])
-        sup_de = tf.reduce_sum(sup_de, 0)
+        sup_de = tf.squeeze(dot(self.vars['weights_de'], self.support))
+        # sup_de = tf.reduce_sum(sup_de, 0)
 
         eigen_val = tf.div(sup, sup_de)
 
