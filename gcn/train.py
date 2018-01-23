@@ -112,7 +112,7 @@ if __name__ == '__main__':
     flags.DEFINE_integer('early_stopping', 100, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('early_stopping_lookback', 10, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')
-    flags.DEFINE_integer('eig_dim', 3000, 'Maximum eigen value number.')
+    flags.DEFINE_integer('eig_dim', 500, 'Maximum eigen value number.')
 
     # Load data
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)
@@ -203,7 +203,7 @@ if __name__ == '__main__':
                   "val_acc=", "{:.5f}".format(acc), "time=", "{:.5f}".format(time.time() - t))
 
             if epoch > FLAGS.early_stopping and (
-                    acc == 1.0
+                    acc >= 1.0
                     # or
                     # acc_val[-1] < np.mean(acc_val[-(FLAGS.early_stopping_lookback + 1):-1])
                     # or
