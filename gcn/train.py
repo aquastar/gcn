@@ -206,17 +206,12 @@ if __name__ == '__main__':
             acc_val.append(acc)
 
             # Print results
-            print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(outs[1]),
-                  "train_acc=", "{:.5f}".format(outs[2]), "val_loss=", "{:.5f}".format(cost),
-                  "val_acc=", "{:.5f}".format(acc), "time=", "{:.5f}".format(time.time() - t))
+            if epoch % 10 == 0:
+                print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(outs[1]),
+                      "train_acc=", "{:.5f}".format(outs[2]), "val_loss=", "{:.5f}".format(cost),
+                      "val_acc=", "{:.5f}".format(acc), "time=", "{:.5f}".format(time.time() - t))
 
-            if epoch > FLAGS.early_stopping and (
-                    acc >= 1.0 or outs[2] >= 1.0
-                    # or
-                    # acc_val[-1] < np.mean(acc_val[-(FLAGS.early_stopping_lookback + 1):-1])
-                    # or
-                    # cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping_lookback + 1):-1])
-            ):
+            if epoch > FLAGS.early_stopping and (acc >= 1.0):
                 print("Early stopping...")
                 break
 
