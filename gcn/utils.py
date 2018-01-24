@@ -8,7 +8,7 @@ import tensorflow as tf
 from scipy.sparse.linalg import inv
 from scipy.sparse.linalg.eigen.arpack import eigsh
 
-from gcn.gen_simulate import graph_forge
+from gen_simulate import graph_forge
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS

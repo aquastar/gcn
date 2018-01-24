@@ -1,4 +1,4 @@
-from gcn.inits import *
+from inits import *
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
