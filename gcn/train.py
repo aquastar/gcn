@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('dataset', 'pubmed', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
+    flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
     flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.')
     flags.DEFINE_integer('epochs', 1000, 'Number of epochs to train.')
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     flags.DEFINE_integer('early_stopping', 100, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('early_stopping_lookback', 10, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')
-    flags.DEFINE_integer('eig_dim', 3000, 'Maximum eigen value number.')
+    flags.DEFINE_integer('eig_dim', 500, 'Maximum eigen value number.')
 
     # Load data
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)
