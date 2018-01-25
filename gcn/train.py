@@ -153,7 +153,7 @@ if __name__ == '__main__':
         support = None
         # cache eigendecompositon result for saving time
         if os.path.isfile('rat_element_sup.pkl'):
-            support = pk.load(open('rat_element_sup.pkl', 'wb'))
+            support = pk.load(open('rat_element_sup.pkl', 'rb'))
         else:
             support = element_rational(adj, FLAGS.max_degree, eig_dim=FLAGS.eig_dim)
             pk.dump(support, open('rat_element_sup.pkl', 'wb'))
