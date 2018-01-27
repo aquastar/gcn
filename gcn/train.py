@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
+    flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
     flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.')
     flags.DEFINE_integer('epochs', 1000, 'Number of epochs to train.')
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         if os.path.isfile('rat_element_sup.pkl'):
             support = pk.load(open('rat_element_sup.pkl', 'rb'))
         else:
-            support = element_rational(adj, FLAGS.max_degree, eig_dim=FLAGS.eig_dim)
+            support = element_rational(adj, FLAGS.max_degree)
             pk.dump(support, open('rat_element_sup.pkl', 'wb'))
         num_supports = 1 + FLAGS.max_degree
         model_func = RAT_ELEMENT

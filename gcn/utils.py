@@ -262,7 +262,7 @@ def normal_rational(adj, k):
     return sparse_to_tuple(t_k)
 
 
-def element_rational(adj, k, eig_dim):
+def element_rational(adj, k, eig_dim=0):
     """Calculate rational up to order of k. Return a list of sparse matrices"""
     print("Calculating rational approximation up to order {}...".format(k))
 
