@@ -106,7 +106,7 @@ if __name__ == '__main__':
     FLAGS = flags.FLAGS
     flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
-    flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.')
+    flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.') # 0.1 best for RAT, 0.01 best for GCN
     flags.DEFINE_integer('epochs', 1000, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
     flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
