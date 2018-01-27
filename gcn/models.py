@@ -313,18 +313,20 @@ class RAT_ELEMENT(Model):
                                         self.placeholders['labels_mask'])
 
     def _build(self):
-        self.layers.append(GraphConvolution_Rational_Element(input_dim=self.input_dim,
-                                                             output_dim=FLAGS.hidden1,
-                                                             placeholders=self.placeholders,
-                                                             act=tf.nn.relu,
-                                                             dropout=True,
-                                                             sparse_inputs=True,
-                                                             logging=self.logging))
+        # self.layers.append(GraphConvolution_Rational_Element(input_dim=self.input_dim,
+        #                                                      output_dim=FLAGS.hidden1,
+        #                                                      placeholders=self.placeholders,
+        #                                                      act=tf.nn.relu,
+        #                                                      dropout=True,
+        #                                                      sparse_inputs=True,
+        #                                                      logging=self.logging))
 
-        self.layers.append(GraphConvolution_Rational_Element(input_dim=FLAGS.hidden1,
+        self.layers.append(GraphConvolution_Rational_Element(
+                                                            # input_dim=FLAGS.hidden1,
+                                                             input_dim=self.input_dim,
                                                              output_dim=self.output_dim,
                                                              placeholders=self.placeholders,
-                                                             # sparse_inputs=True,
+                                                             sparse_inputs=True,
                                                              act=lambda x: x,
                                                              dropout=True,
                                                              logging=self.logging))
