@@ -265,6 +265,7 @@ class GraphConvolution_after_gcn(Layer):
         # output = dot(tf.py_func(np.linalg.pinv, [output_de], tf.float32), output)
 
         # Option 2
+        # output = tf.div(output,self.vars['weights_de'])
         output = dot(self.vars['weights_de'], output)
         # self.vars['weights_de'] = tf.Print(self.vars['weights_de'], [self.vars['weights_de']],
         #                                    message="self.vars['weights_de']:")
@@ -416,8 +417,8 @@ class GraphConvolution_Rational(Layer):
             output_de = tf.add_n(supports_de)
 
         with tf.name_scope("output_div"):
-            # pre_left = dot(output_no, tf.matrix_inverse(output_de))
-            pre_left = tf.div(output_no, output_de)
+            pre_left = dot(output_no, tf.matrix_inverse(output_de))
+            # pre_left = tf.div(output_no, output_de)
             output = dot(pre_left, pre_right)
 
         # bias

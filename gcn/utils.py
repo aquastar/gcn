@@ -8,6 +8,8 @@ import tensorflow as tf
 from scipy.sparse.linalg import inv
 from scipy.sparse.linalg.eigen.arpack import eigsh
 
+from numpy import linalg as LA
+
 from gen_simulate import graph_forge
 
 flags = tf.app.flags
@@ -267,8 +269,9 @@ def element_rational(adj, k, eig_dim):
     eigen_dim = eig_dim
     adj_normalized = normalize_adj(adj)
     laplacian = sp.eye(adj.shape[0]) - adj_normalized
-    eigen_val, eigen_vec = eigsh(laplacian, eigen_dim, which='LM')
+    # eigen_val, eigen_vec = eigsh(laplacian, eigen_dim, which='LM')
     # scaled_laplacian = (2. / largest_eigval[-1]) * laplacian - sp.eye(adj.shape[0])
+    eigen_val, eigen_vec = LA.eigh(laplacian.toarray())
 
     t_k = list()
     t_k.append(np.ones(eigen_dim))
