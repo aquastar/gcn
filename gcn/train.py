@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
+    flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
     flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.')
     flags.DEFINE_integer('epochs', 1000, 'Number of epochs to train.')
@@ -114,11 +114,12 @@ if __name__ == '__main__':
     flags.DEFINE_integer('early_stopping', 100, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('early_stopping_lookback', 10, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')
-    flags.DEFINE_integer('eig_dim', 500, 'Maximum eigen value number.')
+
 
     # Load data
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)
 
+    mat_size = adj.shape[0]
     support_inv = []
 
     # Some preprocessing
@@ -152,7 +153,7 @@ if __name__ == '__main__':
     elif FLAGS.model == 'rat_element':
         support = None
         # cache eigendecompositon result for saving time
-        if os.path.isfile('rat_element_sup.pkl'):
+        if False and os.path.isfile('rat_element_sup.pkl'):
             support = pk.load(open('rat_element_sup.pkl', 'rb'))
         else:
             support = element_rational(adj, FLAGS.max_degree)
@@ -172,8 +173,8 @@ if __name__ == '__main__':
     placeholders = dict()
     if FLAGS.model == 'rat_element':  # Note eigen_dim does matter!
         placeholders = {
-            'support': tf.placeholder(tf.float32, shape=(FLAGS.max_degree + 1, FLAGS.eig_dim), name='support'),
-            'eigen_vec': tf.placeholder(tf.float32, shape=(None, FLAGS.eig_dim), name='eigen_vec'),
+            'support': tf.placeholder(tf.float32, shape=(FLAGS.max_degree + 1, mat_size), name='support'),
+            'eigen_vec': tf.placeholder(tf.float32, shape=(None, mat_size), name='eigen_vec'),
             'features': tf.sparse_placeholder(tf.float32, shape=tf.constant(features[2], dtype=tf.int64), name='feat'),
             'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1]), name='labels'),
             'labels_mask': tf.placeholder(tf.int32, name='labels_mask'),
