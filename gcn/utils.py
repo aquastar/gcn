@@ -274,7 +274,7 @@ def element_rational(adj, k, eig_dim=0):
     eigen_val, eigen_vec = LA.eigh(laplacian.toarray())
 
     t_k = list()
-    t_k.append(np.ones(eigen_dim))
+    t_k.append(np.ones(eigen_val.shape))
     t_k.append(eigen_val)
 
     def normal_recurrence(scaled_lap, k):
