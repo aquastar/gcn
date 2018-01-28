@@ -104,17 +104,16 @@ if __name__ == '__main__':
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
+    flags.DEFINE_string('dataset', 'pubmed', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
-    flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.') # 0.1 best for RAT, 0.01 best for GCN
+    flags.DEFINE_float('learning_rate', 0.3, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
     flags.DEFINE_integer('epochs', 1000, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
     flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
     flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
     flags.DEFINE_integer('early_stopping', 100, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('early_stopping_lookback', 10, 'Tolerance for early stopping (# of epochs).')
-    flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')
-
+    flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')  # 4 is better than 3 for RAT
 
     # Load data
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)
@@ -182,6 +181,8 @@ if __name__ == '__main__':
             'num_features_nonzero': tf.placeholder(tf.int32, name='num_feat_nzero')
         }
         model = model_func(placeholders, input_dim=features[2][1], logging=True)
+
+        #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
 
