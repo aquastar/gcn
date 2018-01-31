@@ -5,10 +5,9 @@ import networkx as nx
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
+from numpy import linalg as LA
 from scipy.sparse.linalg import inv
 from scipy.sparse.linalg.eigen.arpack import eigsh
-
-from numpy import linalg as LA
 
 from gen_simulate import graph_forge
 
@@ -34,7 +33,7 @@ def sample_mask(idx, l):
 def load_data(dataset_str):
     # Simulated data
     if dataset_str == 'simu':
-        return graph_forge(opt='label-graph-feat')
+        return graph_forge(opt='g-fun')
 
     """Load data."""
     names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
@@ -130,13 +129,17 @@ def normalize_adj(adj):
     return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
 
 
-def preprocess_adj(adj):
+def preprocess_adj(adj, normalize=True):
     """Preprocessing of adjacency matrix for simple GCN model and conversion to tuple representation."""
-    adj_normalized = normalize_adj(adj + sp.eye(adj.shape[0]))
+    if normalize:
+        adj_normalized = normalize_adj(adj + sp.eye(adj.shape[0]))
+    else:
+        adj_normalized = sp.coo_matrix(adj)
     return sparse_to_tuple(adj_normalized)
 
 
-def construct_feed_dict(features, support, labels, labels_mask, placeholders, support_inv=None, GCN_flag=False):
+def construct_feed_dict(features, support, labels, labels_mask, placeholders, target_mat=None, support_inv=None,
+                        GCN_flag=False):
     """Construct feed dictionary."""
 
     feed_dict = dict()
@@ -161,22 +164,27 @@ def construct_feed_dict(features, support, labels, labels_mask, placeholders, su
         feed_dict.update({placeholders['support']: support[0]})
         feed_dict.update({placeholders['eigen_vec']: support[1]})
         feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
+        feed_dict.update({placeholders['target_mat']: target_mat})
     else:
         feed_dict.update({placeholders['labels']: labels})
         feed_dict.update({placeholders['labels_mask']: labels_mask})
         feed_dict.update({placeholders['features']: features})
         feed_dict.update({placeholders['support'][i]: support[i] for i in range(len(support))})
         feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
+        feed_dict.update({placeholders['target_mat']: target_mat})
 
     return feed_dict
 
 
-def chebyshev_polynomials(adj, k):
+def chebyshev_polynomials(adj, k, normalize=True):
     """Calculate Chebyshev polynomials up to order k. Return a list of sparse matrices (tuple representation)."""
     print("Calculating Chebyshev polynomials up to order {}...".format(k))
 
-    adj_normalized = normalize_adj(adj)
-    laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    if normalize:
+        adj_normalized = normalize_adj(adj)
+        laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    else:
+        laplacian = sp.coo_matrix(adj)
     largest_eigval, _ = eigsh(laplacian, 1, which='LM')
     scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
 
@@ -262,15 +270,17 @@ def normal_rational(adj, k):
     return sparse_to_tuple(t_k)
 
 
-def element_rational(adj, k, eig_dim=0):
+def element_rational(adj, k, eig_dim=0, normalize=True):
     """Calculate rational up to order of k. Return a list of sparse matrices"""
     print("Calculating rational approximation up to order {}...".format(k))
 
-    eigen_dim = eig_dim
-    adj_normalized = normalize_adj(adj)
-    laplacian = sp.eye(adj.shape[0]) - adj_normalized
-    # eigen_val, eigen_vec = eigsh(laplacian, eigen_dim, which='LM')
-    # scaled_laplacian = (2. / largest_eigval[-1]) * laplacian - sp.eye(adj.shape[0])
+    if normalize:
+        adj_normalized = normalize_adj(adj)
+        laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    else:
+        laplacian = sp.coo_matrix(adj)
+    # largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+    # scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
     eigen_val, eigen_vec = LA.eigh(laplacian.toarray())
 
     t_k = list()

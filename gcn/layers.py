@@ -479,8 +479,8 @@ class GraphConvolution_Rational_Element(Layer):
                 x = tf.nn.dropout(x, 1 - self.dropout)
 
         # rational convolution
-        pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
-        # pre_right = tf.Print(pre_right, [pre_right], message="val: ")
+        # pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
+        pre_right = self.vars['weights_uni']  # featureless
 
         # calculate element wise eigenvalue approximation
         # g(lambda) = diag(P(lambda_1)/Q(lambda_1), P(lambda_2)/Q(lambda_2)...)
@@ -494,19 +494,14 @@ class GraphConvolution_Rational_Element(Layer):
         eigen_val = tf.div(sup, sup_de)
 
         # multiply U and U^t, get estimated function of laplacian graph
-        # self.eigen_vec = tf.Print(self.eigen_vec, [self.eigen_vec, tf.transpose(self.eigen_vec), tf.shape(self.eigen_vec)], message="self.eigen_vec: ")
-        # output = tf.Print(output, [output], message="before pre_left: ")
 
         pre_left = dot(self.eigen_vec, tf.diag(eigen_val))
-        # pre_left = tf.Print(pre_left, [pre_left, tf.shape(pre_left)], message="left pre_left: ")
-
         pre_left = dot(pre_left, tf.transpose(self.eigen_vec))
-        # pre_left = tf.Print(pre_left, [pre_left, tf.shape(pre_left)], message="after pre_left: ")
-
-        # pre_right = tf.Print(pre_right, [tf.shape(pre_right), tf.shape(pre_left)], message="This is a: ")
 
         # multiply feat x and parameters for going next layer
-        output = dot(pre_left, pre_right)
+        # output = dot(pre_left, pre_right)
+
+        output = pre_left
 
         # bias
         if self.bias:

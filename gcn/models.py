@@ -2,6 +2,8 @@ import collections
 
 from layers import *
 from metrics import *
+from gen_simulate import DATA_NUM
+
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -151,24 +153,37 @@ class GCN(Model):
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
 
         # Cross entropy error
-        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
-                                                  self.placeholders['labels_mask'])
+        # self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
+        #                                           self.placeholders['labels_mask'])
+
+        self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+
 
     def _accuracy(self):
-        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
-                                        self.placeholders['labels_mask'])
+        # self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
+        #                                 self.placeholders['labels_mask'])
+
+        self.accuracy = tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+
 
     def _build(self):
-        self.layers.append(GraphConvolution(input_dim=self.input_dim,
-                                            output_dim=FLAGS.hidden1,
-                                            placeholders=self.placeholders,
-                                            act=tf.nn.relu,
-                                            dropout=True,
-                                            sparse_inputs=True,
-                                            logging=self.logging))
+        # self.layers.append(GraphConvolution(
+        #                                     input_dim=self.input_dim,
+        #                                     featureless=True,
+        #                                     output_dim=FLAGS.hidden1,
+        #                                     placeholders=self.placeholders,
+        #                                     act=tf.nn.relu,
+        #                                     dropout=True,
+        #                                     sparse_inputs=True,
+        #                                     logging=self.logging))
 
-        self.layers.append(GraphConvolution(input_dim=FLAGS.hidden1,
-                                            output_dim=self.output_dim,
+        self.layers.append(GraphConvolution(
+                                            # input_dim=FLAGS.hidden1,
+                                            input_dim=DATA_NUM,
+                                            sparse_inputs=True,
+                                            featureless=True,
+                                            output_dim=DATA_NUM,
+                                            # output_dim=self.output_dim,
                                             placeholders=self.placeholders,
                                             act=lambda x: x,
                                             dropout=True,
@@ -305,12 +320,17 @@ class RAT_ELEMENT(Model):
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
 
         # Cross entropy error
-        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
-                                                  self.placeholders['labels_mask'])
+        # self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
+        #                                           self.placeholders['labels_mask'])
+
+        self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
 
     def _accuracy(self):
-        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
-                                        self.placeholders['labels_mask'])
+        # self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
+        #                                 self.placeholders['labels_mask'])
+
+        self.accuracy = tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+
 
     def _build(self):
         # self.layers.append(GraphConvolution_Rational_Element(input_dim=self.input_dim,
@@ -323,8 +343,9 @@ class RAT_ELEMENT(Model):
 
         self.layers.append(GraphConvolution_Rational_Element(
                                                             # input_dim=FLAGS.hidden1,
-                                                             input_dim=self.input_dim,
-                                                             output_dim=self.output_dim,
+                                                             input_dim=DATA_NUM,
+                                                             # output_dim=self.output_dim,
+                                                             output_dim=DATA_NUM,
                                                              placeholders=self.placeholders,
                                                              sparse_inputs=True,
                                                              act=lambda x: x,

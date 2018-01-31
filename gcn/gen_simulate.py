@@ -7,6 +7,7 @@ from itertools import combinations
 import networkx as nx
 import numpy as np
 from networkx import from_scipy_sparse_matrix
+from numpy import linalg as LA
 from scipy.sparse import lil_matrix
 
 ################################################
@@ -33,7 +34,7 @@ from scipy.sparse import lil_matrix
 ################################################
 
 FEAT_NUM = 10
-CLASS_NUM = 10
+CLASS_NUM = 2
 DATA_NUM = 500
 HI_MEAN = [5, 10]
 LO_MEAN = [-10, 5]
@@ -201,6 +202,35 @@ def gen_label_graph(data_num, label):
     return nx.adjacency_matrix(nx.from_dict_of_lists(adj))
 
 
+def gen_gx_graph(data_num, label, spec=True):
+    if spec:
+        print('specified func')
+        random_mat = np.eye(DATA_NUM)
+        for i in xrange(DATA_NUM):
+            for j in xrange(DATA_NUM):
+                if i == j:
+                    random_mat[i, j] = 1
+                elif i + 1 == j:
+                    random_mat[i, j] = -1
+                # elif i == j + 1:
+                #     random_mat[i, j] = 0
+        graph = nx.from_numpy_matrix(random_mat)
+
+    else:
+        print('random func')
+        random_mat = gen_label_graph(data_num, label).toarray()
+        eigen_val, eigen_vec = LA.eigh(random_mat)
+        eigen_val = np.power(np.abs(eigen_val), 0.5)
+        new_mat = np.dot(np.dot(eigen_vec, np.diag(eigen_val)), np.transpose(eigen_vec))
+        graph = nx.from_numpy_matrix(new_mat)
+
+    return nx.adjacency_matrix(graph)
+
+
+def gen_label_fr_graph(graph):
+    pass
+
+
 def gen_rand_label(data_num, class_num):
     return np.random.choice(class_num, data_num)
 
@@ -237,6 +267,12 @@ def graph_forge(opt='rand'):
         print 'Data : label-graph-feat'
         feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
         graph = gen_label_graph(data_num=DATA_NUM, label=label)
+        label = to_categorical(label)
+    elif opt == 'g-fun':
+        print 'Data : control the g(x)'
+        feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
+        graph = gen_gx_graph(data_num=DATA_NUM, label=label, spec=True)
+        # label = gen_label_fr_graph(graph)
         label = to_categorical(label)
 
     ################################################

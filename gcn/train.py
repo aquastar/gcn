@@ -97,17 +97,17 @@ def evaluate_roc(features, support, labels, mask, placeholders, name='model', GC
 if __name__ == '__main__':
 
     # Set random seed
-    seed = 88
+    seed = 123
     np.random.seed(seed)
     tf.set_random_seed(seed)
 
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('dataset', 'pubmed', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
+    flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
-    flags.DEFINE_float('learning_rate', 0.3, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
-    flags.DEFINE_integer('epochs', 1000, 'Number of epochs to train.')
+    flags.DEFINE_float('learning_rate', 0.8, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
+    flags.DEFINE_integer('epochs', 2000, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
     flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
     flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
@@ -124,12 +124,12 @@ if __name__ == '__main__':
     # Some preprocessing
     features = preprocess_features(features)
     if FLAGS.model == 'gcn':
-        support = [preprocess_adj(adj)]
+        support = [preprocess_adj(adj, normalize=False)]
         num_supports = 1
         model_func = GCN
         print('gcn')
     elif FLAGS.model == 'gcn_cheby':
-        support = chebyshev_polynomials(adj, FLAGS.max_degree)
+        support = chebyshev_polynomials(adj, FLAGS.max_degree, normalize=False)
         num_supports = 1 + FLAGS.max_degree
         model_func = GCN
         print('gcn_cheby')
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         if False and os.path.isfile('rat_element_sup.pkl'):
             support = pk.load(open('rat_element_sup.pkl', 'rb'))
         else:
-            support = element_rational(adj, FLAGS.max_degree)
+            support = element_rational(adj, FLAGS.max_degree, normalize=False)
             pk.dump(support, open('rat_element_sup.pkl', 'wb'))
         num_supports = 1 + FLAGS.max_degree
         model_func = RAT_ELEMENT
@@ -178,11 +178,12 @@ if __name__ == '__main__':
             'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1]), name='labels'),
             'labels_mask': tf.placeholder(tf.int32, name='labels_mask'),
             'dropout': tf.placeholder_with_default(0., shape=(), name='dropout'),
-            'num_features_nonzero': tf.placeholder(tf.int32, name='num_feat_nzero')
+            'num_features_nonzero': tf.placeholder(tf.int32, name='num_feat_nzero'),
+            'target_mat': tf.placeholder(tf.float32, shape=(mat_size, mat_size), name='target_mat')
         }
         model = model_func(placeholders, input_dim=features[2][1], logging=True)
 
-        #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+        # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
 
@@ -192,30 +193,34 @@ if __name__ == '__main__':
 
         cost_val = []
         acc_val = []
+        output_log = None
         for epoch in range(FLAGS.epochs):
-
             t = time.time()
             # Construct feed dictionary
-            feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders)
+            feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders,
+                                            target_mat=adj.toarray())
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
-            outs = sess.run([model.opt_op, model.loss, model.accuracy], feed_dict=feed_dict)
+            outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs], feed_dict=feed_dict)
 
             # Validation
-            cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
-            cost_val.append(cost)
-            acc_val.append(acc)
+            # cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
+            # cost_val.append(cost)
+            # acc_val.append(acc)
 
             # Print results
-            if epoch % 10 == 0:
-                print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(outs[1]),
-                      "train_acc=", "{:.5f}".format(outs[2]), "val_loss=", "{:.5f}".format(cost),
-                      "val_acc=", "{:.5f}".format(acc), "time=", "{:.5f}".format(time.time() - t))
+            print("Epoch:", '%04d' % (epoch + 1),
+                  "train_loss=", "{:.5f}".format(outs[1]),
+                  "train_acc=", "{:.5f}".format(outs[2]),
+                  # "val_loss=", "{:.5f}".format(cost),
+                  # "val_acc=", "{:.5f}".format(acc),
+                  "time=", "{:.5f}".format(time.time() - t))
+            output_log = outs[-1]
 
-            if epoch > FLAGS.early_stopping and acc == 1.0:
-                print("Early stopping...")
-                break
+            # if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
+            #     print("Early stopping...")
+            #     break
 
         print("Optimization Finished!")
 
@@ -324,7 +329,8 @@ if __name__ == '__main__':
             'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1]), name='labels'),
             'labels_mask': tf.placeholder(tf.int32, name='lables_mask'),
             'dropout': tf.placeholder_with_default(0., shape=()),
-            'num_features_nonzero': tf.placeholder(tf.int32)  # helper variable for sparse dropout
+            'num_features_nonzero': tf.placeholder(tf.int32),  # helper variable for sparse dropout
+            'target_mat': tf.placeholder(tf.float32, shape=(mat_size, mat_size), name='target_mat')
         }
 
         model = model_func(placeholders, input_dim=features[2][1], logging=True)
@@ -337,31 +343,34 @@ if __name__ == '__main__':
 
         cost_val = []
         acc_val = []
-        for epoch in range(FLAGS.epochs):
+        output_log = None
 
+        for epoch in range(FLAGS.epochs):
             t = time.time()
             # Construct feed dictionary
-            feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders)
+            feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders,
+                                            target_mat=adj.toarray())
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
-            outs = sess.run([model.opt_op, model.loss, model.accuracy], feed_dict=feed_dict)
+            outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs], feed_dict=feed_dict)
 
             # Validation
-            cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
-            cost_val.append(cost)
-            acc_val.append(acc)
+            # cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
+            # cost_val.append(cost)
+            # acc_val.append(acc)
 
             # Print results
             print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(outs[1]),
-                  "train_acc=", "{:.5f}".format(outs[2]), "val_loss=", "{:.5f}".format(cost),
-                  "val_acc=", "{:.5f}".format(acc), "time=", "{:.5f}".format(time.time() - t))
+                  "train_acc=", "{:.5f}".format(outs[2]),
+                  # "val_loss=", "{:.5f}".format(cost),
+                  # "val_acc=", "{:.5f}".format(acc),
+                  "time=", "{:.5f}".format(time.time() - t))
+            output_log = outs[-1]
 
-            if epoch > FLAGS.early_stopping and (
-                    acc_val[-1] > np.mean(acc_val[-(FLAGS.early_stopping + 1):-1]) or cost_val[-1] > np.mean(
-                cost_val[-(FLAGS.early_stopping + 1):-1])):
-                print("Early stopping...")
-                break
+            # if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
+            #     print("Early stopping...")
+            #     break
 
         print("Optimization Finished!")
 
