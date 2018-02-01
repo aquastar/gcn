@@ -278,6 +278,7 @@ def element_rational(adj, k, eig_dim=0, normalize=True):
         adj_normalized = normalize_adj(adj)
         laplacian = sp.eye(adj.shape[0]) - adj_normalized
     else:
+        # laplacian =  degree_mt - ajd
         laplacian = sp.coo_matrix(adj)
     # largest_eigval, _ = eigsh(laplacian, 1, which='LM')
     # scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
