@@ -6,6 +6,7 @@ from itertools import combinations
 
 import networkx as nx
 import numpy as np
+from scipy.sparse import csr_matrix
 from networkx import from_scipy_sparse_matrix
 from numpy import linalg as LA
 from scipy.sparse import lil_matrix
@@ -35,9 +36,9 @@ from scipy.sparse import lil_matrix
 
 FEAT_NUM = 10
 CLASS_NUM = 2
-DATA_NUM = 500
+DATA_NUM = 100
 HI_MEAN = [5, 10]
-LO_MEAN = [-10, 5]
+LO_MEAN = [0, 5]
 HI_CVAR = [0, 5]
 LO_CVAR = [5, 10]
 
@@ -213,7 +214,8 @@ def gen_gx_graph(data_num, label, spec=True):
                 elif i + 1 == j:
                     random_mat[i, j] = -1
                 # elif i == j + 1:
-                #     random_mat[i, j] = 0
+                #     random_mat[i, j] = -1
+        # return csr_matrix(random_mat)
         graph = nx.from_numpy_matrix(random_mat)
 
     else:
@@ -271,7 +273,7 @@ def graph_forge(opt='rand'):
     elif opt == 'g-fun':
         print 'Data : control the g(x)'
         feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
-        graph = gen_gx_graph(data_num=DATA_NUM, label=label, spec=True)
+        graph = gen_gx_graph(data_num=DATA_NUM, label=label, spec=False)
         # label = gen_label_fr_graph(graph)
         label = to_categorical(label)
 

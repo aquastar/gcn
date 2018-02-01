@@ -105,9 +105,9 @@ if __name__ == '__main__':
     flags = tf.app.flags
     FLAGS = flags.FLAGS
     flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
-    flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
-    flags.DEFINE_float('learning_rate', 0.8, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
-    flags.DEFINE_integer('epochs', 2000, 'Number of epochs to train.')
+    flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
+    flags.DEFINE_float('learning_rate', 0.5, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
+    flags.DEFINE_integer('epochs', 4000, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
     flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
     flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
@@ -374,7 +374,7 @@ if __name__ == '__main__':
 
         print("Optimization Finished!")
 
-        test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders,
-                                                          name=FLAGS.model, )
-        print("Test set results:", "cost=", "{:.5f}".format(test_cost),
-              "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))
+        # test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders,
+        #                                                   name=FLAGS.model, )
+        # print("Test set results:", "cost=", "{:.5f}".format(test_cost),
+        #       "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))
