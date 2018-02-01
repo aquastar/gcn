@@ -209,11 +209,11 @@ def gen_gx_graph(data_num, label, spec=True):
         for i in xrange(DATA_NUM):
             for j in xrange(DATA_NUM):
                 if i == j:
-                    random_mat[i, j] = 1
+                    random_mat[i, j] = -2
                 elif i + 1 == j:
-                    random_mat[i, j] = -1
-                # elif i == j + 1:
-                #     random_mat[i, j] = 0
+                    random_mat[i, j] = 1
+                elif i == j + 1:
+                    random_mat[i, j] = 1
         graph = nx.from_numpy_matrix(random_mat)
 
     else:

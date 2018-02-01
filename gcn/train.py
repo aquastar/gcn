@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from scipy import interp
 from sklearn.metrics import roc_curve, auc
 
-from models import GCN, MLP, RAT, RAT_ELEMENT, RAT_after_GCN
+from models import GCN, MLP, RAT, RAT_ELEMENT, RAT_after_GCN, DATA_NUM
 from utils import *
 
 
@@ -106,14 +106,14 @@ if __name__ == '__main__':
     FLAGS = flags.FLAGS
     flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
-    flags.DEFINE_float('learning_rate', 0.8, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
-    flags.DEFINE_integer('epochs', 2000, 'Number of epochs to train.')
+    flags.DEFINE_float('learning_rate', 0.9, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
+    flags.DEFINE_integer('epochs', 4000, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
     flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
     flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
     flags.DEFINE_integer('early_stopping', 100, 'Tolerance for early stopping (# of epochs).')
     flags.DEFINE_integer('early_stopping_lookback', 10, 'Tolerance for early stopping (# of epochs).')
-    flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')  # 4 is better than 3 for RAT
+    flags.DEFINE_integer('max_degree', 4, 'Maximum Chebyshev polynomial degree.')  # 4 is better than 3 for RAT
 
     # Load data
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)
@@ -168,6 +168,13 @@ if __name__ == '__main__':
     else:
         raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
 
+    # artificial target_mat
+    target_mat = np.eye(DATA_NUM)
+    for i in xrange(DATA_NUM):
+        for j in xrange(DATA_NUM):
+            if i + 1 == j:
+                target_mat[i, j] = -1
+
     # Define placeholders
     placeholders = dict()
     if FLAGS.model == 'rat_element':  # Note eigen_dim does matter!
@@ -194,11 +201,12 @@ if __name__ == '__main__':
         cost_val = []
         acc_val = []
         output_log = None
+
         for epoch in range(FLAGS.epochs):
             t = time.time()
             # Construct feed dictionary
             feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders,
-                                            target_mat=adj.toarray())
+                                            target_mat=target_mat)
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
@@ -349,7 +357,7 @@ if __name__ == '__main__':
             t = time.time()
             # Construct feed dictionary
             feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders,
-                                            target_mat=adj.toarray())
+                                            target_mat=target_mat)
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
