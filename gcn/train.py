@@ -7,10 +7,10 @@ import time
 from itertools import cycle
 
 import matplotlib.pyplot as plt
-from scipy import interp
+from scipy import interp, sqrt
 from sklearn.metrics import roc_curve, auc
 
-from models import GCN, MLP, RAT, RAT_ELEMENT, RAT_after_GCN
+from models import GCN, MLP, RAT, RAT_ELEMENT, RAT_after_GCN, DATA_NUM
 from utils import *
 
 
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         print('gcn_cheby')
     elif FLAGS.model == 'rat_element':
         support = None
-        # cache eigendecompositon result for saving time
+        # cache eigen decompositon result for saving time
         if False and os.path.isfile('rat_element_sup.pkl'):
             support = pk.load(open('rat_element_sup.pkl', 'rb'))
         else:
@@ -167,6 +167,14 @@ if __name__ == '__main__':
         print('rational_pfd')
     else:
         raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
+
+    target_mat = np.eye(DATA_NUM)
+    for i in xrange(DATA_NUM):
+        for j in xrange(DATA_NUM):
+            if i == j:
+                target_mat[i, j] = 1
+            elif i + 1 == j:
+                target_mat[i, j] = -1
 
     # Define placeholders
     placeholders = dict()
