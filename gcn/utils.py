@@ -33,7 +33,7 @@ def sample_mask(idx, l):
 def load_data(dataset_str):
     # Simulated data
     if dataset_str == 'simu':
-        return graph_forge(opt='g-fun')
+        return graph_forge(opt='label-graph-feat')
 
     """Load data."""
     names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
