@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from scipy import interp
 from sklearn.metrics import roc_curve, auc
 
-from models import GCN, MLP, RAT, RAT_ELEMENT, RAT_after_GCN
+from models import GCN, MLP, RAT, RAT_ELEMENT, RAT_after_GCN, DATA_NUM
 from utils import *
 
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     FLAGS = flags.FLAGS
     flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
     flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
-    flags.DEFINE_float('learning_rate', 0.5, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
+    flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
     flags.DEFINE_integer('epochs', 4000, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
     flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
@@ -168,6 +168,19 @@ if __name__ == '__main__':
     else:
         raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
 
+    target_mat = np.eye(DATA_NUM)
+    for i in xrange(DATA_NUM):
+        for j in xrange(DATA_NUM):
+            if i == j:
+                target_mat[i, j] = 2
+            elif i + 1 == j:
+                target_mat[i, j] = -1
+            elif i == j + 1:
+                target_mat[i, j] = -1
+    eigen_val, eigen_vec = LA.eigh(target_mat)
+    eigen_val = np.power(eigen_val, 0.5)
+    target_mat = np.dot(np.dot(eigen_vec, np.diag(eigen_val)), np.transpose(eigen_vec))
+
     # Define placeholders
     placeholders = dict()
     if FLAGS.model == 'rat_element':  # Note eigen_dim does matter!
@@ -198,11 +211,12 @@ if __name__ == '__main__':
             t = time.time()
             # Construct feed dictionary
             feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders,
-                                            target_mat=adj.toarray())
+                                            target_mat=target_mat)
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
             outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs], feed_dict=feed_dict)
+            cost_val.append(outs[1])
 
             # Validation
             # cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
@@ -218,16 +232,16 @@ if __name__ == '__main__':
                   "time=", "{:.5f}".format(time.time() - t))
             output_log = outs[-1]
 
-            # if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
-            #     print("Early stopping...")
-            #     break
+            if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
+                print("Early stopping...")
+                break
 
         print("Optimization Finished!")
 
-        test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders,
-                                                          name=FLAGS.model)
-        print("Test set results:", "cost=", "{:.5f}".format(test_cost),
-              "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))
+        # test_cost, test_acc, test_duration = evaluate_roc(features, support, y_test, test_mask, placeholders,
+        #                                                   name=FLAGS.model)
+        # print("Test set results:", "cost=", "{:.5f}".format(test_cost),
+        #       "accuracy=", "{:.5f}".format(test_acc), "time=", "{:.5f}".format(test_duration))
     elif FLAGS.model == 'rat_pre_train':
         placeholders = {
             'support': [tf.sparse_placeholder(tf.float32) for _ in range(num_supports)],
@@ -349,11 +363,12 @@ if __name__ == '__main__':
             t = time.time()
             # Construct feed dictionary
             feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders,
-                                            target_mat=adj.toarray())
+                                            target_mat=target_mat)
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
             outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs], feed_dict=feed_dict)
+            cost_val.append(outs[1])
 
             # Validation
             # cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
@@ -368,9 +383,9 @@ if __name__ == '__main__':
                   "time=", "{:.5f}".format(time.time() - t))
             output_log = outs[-1]
 
-            # if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
-            #     print("Early stopping...")
-            #     break
+            if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
+                print("Early stopping...")
+                break
 
         print("Optimization Finished!")
 
