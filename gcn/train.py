@@ -105,15 +105,15 @@ if __name__ == '__main__':
     flags = tf.app.flags
     FLAGS = flags.FLAGS
     flags.DEFINE_string('dataset', 'simu', 'Dataset string.')  # 'cora:2708', 'citeseer:3327', 'pubmed:19717', 'simu'
-    flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
-    flags.DEFINE_float('learning_rate', 0.05, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
-    flags.DEFINE_integer('epochs', 4000, 'Number of epochs to train.')
+    flags.DEFINE_string('model', 'rat_element', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense', 'rat'
+    flags.DEFINE_float('learning_rate', 0.4, 'Initial learning rate.')  # 0.1-0.5 best for RAT, 0.01 best for GCN
+    flags.DEFINE_integer('epochs', 30000, 'Number of epochs to train.')
     flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
     flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
     flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
-    flags.DEFINE_integer('early_stopping', 100, 'Tolerance for early stopping (# of epochs).')
-    flags.DEFINE_integer('early_stopping_lookback', 10, 'Tolerance for early stopping (# of epochs).')
-    flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')  # 4 is better than 3 for RAT
+    flags.DEFINE_integer('early_stopping', 20000, 'Toerance for early stopping (# of epochs).')
+    flags.DEFINE_integer('early_stopping_lookback', 50, 'Tolerance for early stopping (# of epochs).')
+    flags.DEFINE_integer('max_degree', 4, 'Maximum Chebyshev polynomial degree.')  # 4 is better than 3 for RAT
 
     # Load data
     adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         model_func = GCN
         print('gcn')
     elif FLAGS.model == 'gcn_cheby':
-        support = chebyshev_polynomials(adj, FLAGS.max_degree, normalize=False)
+        support = chebyshev_polynomials(adj, FLAGS.max_degree, normalize=True)
         num_supports = 1 + FLAGS.max_degree
         model_func = GCN
         print('gcn_cheby')
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         if False and os.path.isfile('rat_element_sup.pkl'):
             support = pk.load(open('rat_element_sup.pkl', 'rb'))
         else:
-            support = element_rational(adj, FLAGS.max_degree, normalize=False)
+            support = element_rational(adj, FLAGS.max_degree, normalize_lap=False)
             pk.dump(support, open('rat_element_sup.pkl', 'wb'))
         num_supports = 1 + FLAGS.max_degree
         model_func = RAT_ELEMENT
@@ -177,6 +177,9 @@ if __name__ == '__main__':
                 target_mat[i, j] = -1
             elif i == j + 1:
                 target_mat[i, j] = -1
+
+    largest_eigval, _ = eigsh(target_mat, 1, which='LM')
+    norm_lap = target_mat / largest_eigval[0]
     eigen_val, eigen_vec = LA.eigh(target_mat)
     eigen_val = np.power(eigen_val, 0.5)
     target_mat = np.dot(np.dot(eigen_vec, np.diag(eigen_val)), np.transpose(eigen_vec))
@@ -206,7 +209,7 @@ if __name__ == '__main__':
 
         cost_val = []
         acc_val = []
-        output_log = None
+
         for epoch in range(FLAGS.epochs):
             t = time.time()
             # Construct feed dictionary
@@ -215,7 +218,8 @@ if __name__ == '__main__':
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
-            outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs], feed_dict=feed_dict)
+            outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs, model.layers[0].vars['weights'],
+                             model.layers[0].vars['weights_de']], feed_dict=feed_dict)
             cost_val.append(outs[1])
 
             # Validation
@@ -230,7 +234,6 @@ if __name__ == '__main__':
                   # "val_loss=", "{:.5f}".format(cost),
                   # "val_acc=", "{:.5f}".format(acc),
                   "time=", "{:.5f}".format(time.time() - t))
-            output_log = outs[-1]
 
             if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping + 1):-1]):
                 print("Early stopping...")
@@ -357,7 +360,6 @@ if __name__ == '__main__':
 
         cost_val = []
         acc_val = []
-        output_log = None
 
         for epoch in range(FLAGS.epochs):
             t = time.time()
@@ -367,7 +369,7 @@ if __name__ == '__main__':
             feed_dict.update({placeholders['dropout']: FLAGS.dropout})
 
             # Training step
-            outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs], feed_dict=feed_dict)
+            outs = sess.run([model.opt_op, model.loss, model.accuracy, model.outputs, model.layers[0].vars], feed_dict=feed_dict)
             cost_val.append(outs[1])
 
             # Validation

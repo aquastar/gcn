@@ -273,12 +273,17 @@ class RAT(Model):
             self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
 
         # Cross entropy error
-        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
-                                                  self.placeholders['labels_mask'])
+        # self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
+        #                                           self.placeholders['labels_mask'])
+        self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+
 
     def _accuracy(self):
-        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
-                                        self.placeholders['labels_mask'])
+        # self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
+        #                                 self.placeholders['labels_mask'])
+
+        self.accuracy = tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+
 
     def _build(self):
         self.layers.append(GraphConvolution_rat_test(input_dim=self.input_dim,

@@ -273,7 +273,7 @@ def graph_forge(opt='rand'):
     elif opt == 'g-fun':
         print 'Data : control the g(x)'
         feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
-        graph = gen_gx_graph(data_num=DATA_NUM, label=label, spec=False)
+        graph = gen_gx_graph(data_num=DATA_NUM, label=label, spec=True)
         # label = gen_label_fr_graph(graph)
         label = to_categorical(label)
 

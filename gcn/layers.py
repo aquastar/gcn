@@ -456,10 +456,20 @@ class GraphConvolution_Rational_Element(Layer):
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
         with tf.variable_scope(self.name + '_vars'):
-            self.vars['weights'] = glorot([1, FLAGS.max_degree + 1], name='weights')
-            self.vars['weights_de'] = glorot([1, FLAGS.max_degree + 1], name='weights_de')
+            self.vars['weights'] = truncated_normal([1, FLAGS.max_degree + 1], name='weights')
+            # self.vars['weights_de'] = truncated_normal([1, FLAGS.max_degree + 1], name='weights_de')
+            self.vars['weights_de'] = tf.concat([truncated_normal([1, FLAGS.max_degree], name='weights_de'),tf.ones([1, 1], tf.float32)], 1)
 
-            self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
+            # a0 = 8.43879042e-05
+            # a1 = 9.05976227
+            # a2 = 6.08403085e+01
+            # a3 = 2.50256727e+01
+            # a4 = -2.28537321
+            # b0 = 1
+            # b1 = 3.29206329e+01
+            # b2 = 5.87276401e+01
+
+            # self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
 
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
@@ -480,7 +490,7 @@ class GraphConvolution_Rational_Element(Layer):
 
         # rational convolution
         # pre_right = dot(x, self.vars['weights_uni'], sparse=self.sparse_inputs)
-        pre_right = self.vars['weights_uni']  # featureless
+        # pre_right = self.vars['weights_uni']  # featureless
 
         # calculate element wise eigenvalue approximation
         # g(lambda) = diag(P(lambda_1)/Q(lambda_1), P(lambda_2)/Q(lambda_2)...)
@@ -506,10 +516,6 @@ class GraphConvolution_Rational_Element(Layer):
         # bias
         if self.bias:
             output += self.vars['bias']
-
-        # try norm_batch
-        # bn = tf.layers.batch_normalization(output,axis=1,center=True,scale=False)
-        # output = slim.batch_norm(output, is_training=True)
 
         return self.act(output)
 

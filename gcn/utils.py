@@ -33,7 +33,7 @@ def sample_mask(idx, l):
 def load_data(dataset_str):
     # Simulated data
     if dataset_str == 'simu':
-        return graph_forge(opt='label-graph-feat')
+        return graph_forge(opt='g-fun')
 
     """Load data."""
     names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
@@ -270,19 +270,21 @@ def normal_rational(adj, k):
     return sparse_to_tuple(t_k)
 
 
-def element_rational(adj, k, eig_dim=0, normalize=True):
+def element_rational(adj, k, eig_dim=0, normalize_lap=True):
     """Calculate rational up to order of k. Return a list of sparse matrices"""
     print("Calculating rational approximation up to order {}...".format(k))
 
-    if normalize:
+    if normalize_lap:
         adj_normalized = normalize_adj(adj)
         laplacian = sp.eye(adj.shape[0]) - adj_normalized
+
     else:
-        # laplacian =  degree_mt - ajd
-        laplacian = sp.coo_matrix(adj)
-    # largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+        laplacian = sp.coo_matrix(adj).asfptype()
+    largest_eigval, _ = eigsh(laplacian, 1, which='LM')
     # scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
-    eigen_val, eigen_vec = LA.eigh(laplacian.toarray())
+    norm_lap = laplacian.toarray()/largest_eigval[0]
+    eigen_val, eigen_vec = LA.eigh(norm_lap)
+    # eigen_val /= eigen_val[-1]
 
     t_k = list()
     t_k.append(np.ones(eigen_val.shape))
