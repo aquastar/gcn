@@ -469,6 +469,7 @@ class GraphConvolution_Rational_Element(Layer):
             # b0 = 1
             # b1 = 3.29206329e+01
             # b2 = 5.87276401e+01
+            # (+.0000843879042 + 9.05976227x+60.8403085x ^ 2+ 25.0256727x ^ 3-2.28537321x ^ 4) / (1 + 32.9206329 x+ 58.7276401x ^ 2)
 
             # self.vars['weights_uni'] = glorot([input_dim, output_dim], name='weights_uni')
 

@@ -5,11 +5,9 @@ import cPickle as pk
 import os.path
 import time
 from itertools import cycle
-
 import matplotlib.pyplot as plt
 from scipy import interp
 from sklearn.metrics import roc_curve, auc
-
 from models import GCN, MLP, RAT, RAT_ELEMENT, RAT_after_GCN, DATA_NUM
 from utils import *
 
