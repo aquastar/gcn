@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy.polynomial as P
 from models import test_model
 
-low_border = -10.0
-hi_border = 10.0
+low_border = 0.0
+hi_border = 20.0
 
 
 def sample_mask(idx, l):
@@ -19,8 +19,10 @@ def sample_mask(idx, l):
     return np.array(mask, dtype=np.bool)
 
 
-def f(x, opt=9):
-    if opt == 1:
+def f(x, opt=0):
+    if opt == 0:
+        return np.sqrt(x)
+    elif opt == 1:
         return np.sqrt(abs(x - 3))
     elif opt == 2:
         return np.minimum(abs(x), np.exp(x))

@@ -1,9 +1,8 @@
 import collections
 
+from gen_simulate import DATA_NUM
 from layers import *
 from metrics import *
-from gen_simulate import DATA_NUM
-
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -156,15 +155,13 @@ class GCN(Model):
         # self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
         #                                           self.placeholders['labels_mask'])
 
-        self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
-
+        self.loss += tf.nn.l2_loss(self.outputs - self.placeholders['target_mat'])
 
     def _accuracy(self):
         # self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
         #                                 self.placeholders['labels_mask'])
 
-        self.accuracy = tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
-
+        self.accuracy = tf.nn.l2_loss(self.outputs - self.placeholders['target_mat'])
 
     def _build(self):
         # self.layers.append(GraphConvolution(
@@ -178,16 +175,16 @@ class GCN(Model):
         #                                     logging=self.logging))
 
         self.layers.append(GraphConvolution(
-                                            # input_dim=FLAGS.hidden1,
-                                            input_dim=DATA_NUM,
-                                            sparse_inputs=True,
-                                            featureless=True,
-                                            output_dim=DATA_NUM,
-                                            # output_dim=self.output_dim,
-                                            placeholders=self.placeholders,
-                                            act=lambda x: x,
-                                            dropout=True,
-                                            logging=self.logging))
+            # input_dim=FLAGS.hidden1,
+            input_dim=DATA_NUM,
+            sparse_inputs=True,
+            featureless=True,
+            output_dim=DATA_NUM,
+            # output_dim=self.output_dim,
+            placeholders=self.placeholders,
+            act=lambda x: x,
+            dropout=True,
+            logging=self.logging))
 
     def predict(self):
         return tf.nn.softmax(self.outputs)
@@ -209,7 +206,7 @@ class RAT_after_GCN(Model):
         self.output_dim = placeholders['labels'].get_shape().as_list()[1]
         self.placeholders = placeholders
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate*10)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate * 10)
         # self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate)
 
         self.build()
@@ -275,15 +272,13 @@ class RAT(Model):
         # Cross entropy error
         # self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
         #                                           self.placeholders['labels_mask'])
-        self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
-
+        self.loss += tf.nn.l2_loss(self.outputs - self.placeholders['target_mat'])
 
     def _accuracy(self):
         # self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
         #                                 self.placeholders['labels_mask'])
 
-        self.accuracy = tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
-
+        self.accuracy = tf.nn.l2_loss(self.outputs - self.placeholders['target_mat'])
 
     def _build(self):
         self.layers.append(GraphConvolution_rat_test(input_dim=self.input_dim,
@@ -328,14 +323,18 @@ class RAT_ELEMENT(Model):
         # self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
         #                                           self.placeholders['labels_mask'])
 
-        self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+        # self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+
+        loss = tf.pow(self.outputs - self.placeholders['target_mat'], 2)
+        self.loss += tf.reduce_mean(loss)
 
     def _accuracy(self):
         # self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
         #                                 self.placeholders['labels_mask'])
 
-        self.accuracy = tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
+        # self.accuracy = tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
 
+        self.accuracy = tf.reduce_mean(tf.pow(self.outputs - self.placeholders['target_mat'], 2))
 
     def _build(self):
         # self.layers.append(GraphConvolution_Rational_Element(input_dim=self.input_dim,
@@ -347,15 +346,15 @@ class RAT_ELEMENT(Model):
         #                                                      logging=self.logging))
 
         self.layers.append(GraphConvolution_Rational_Element(
-                                                            # input_dim=FLAGS.hidden1,
-                                                             input_dim=DATA_NUM,
-                                                             # output_dim=self.output_dim,
-                                                             output_dim=DATA_NUM,
-                                                             placeholders=self.placeholders,
-                                                             sparse_inputs=True,
-                                                             act=lambda x: x,
-                                                             dropout=True,
-                                                             logging=self.logging))
+            # input_dim=FLAGS.hidden1,
+            input_dim=DATA_NUM,
+            # output_dim=self.output_dim,
+            output_dim=DATA_NUM,
+            placeholders=self.placeholders,
+            sparse_inputs=True,
+            act=lambda x: x,
+            dropout=True,
+            logging=self.logging))
 
     def predict(self):
         return tf.nn.softmax(self.outputs)
