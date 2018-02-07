@@ -326,7 +326,7 @@ class RAT_ELEMENT(Model):
         # self.loss += tf.nn.l2_loss(self.outputs-self.placeholders['target_mat'])
 
         loss = tf.pow(self.outputs - self.placeholders['target_mat'], 2)
-        self.loss += tf.reduce_mean(loss)
+        self.loss += tf.reduce_sum(loss)
 
     def _accuracy(self):
         # self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],

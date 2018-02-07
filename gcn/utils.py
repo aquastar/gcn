@@ -180,13 +180,16 @@ def chebyshev_polynomials(adj, k, normalize=True):
     """Calculate Chebyshev polynomials up to order k. Return a list of sparse matrices (tuple representation)."""
     print("Calculating Chebyshev polynomials up to order {}...".format(k))
 
-    if normalize:
-        adj_normalized = normalize_adj(adj)
-        laplacian = sp.eye(adj.shape[0]) - adj_normalized
-    else:
-        laplacian = sp.coo_matrix(adj)
-    largest_eigval, _ = eigsh(laplacian, 1, which='LM')
-    scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
+    # if normalize:
+    #     adj_normalized = normalize_adj(adj)
+    #     laplacian = sp.eye(adj.shape[0]) - adj_normalized
+    # else:
+    #     laplacian = sp.coo_matrix(adj)
+    # largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+    # scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
+
+    adj = nx.adjacency_matrix(nx.from_numpy_matrix(adj))
+    scaled_laplacian = adj
 
     t_k = list()
     t_k.append(sp.eye(adj.shape[0]))
@@ -280,10 +283,12 @@ def element_rational(adj, k, eig_dim=0, normalize_lap=True):
 
     else:
         laplacian = sp.coo_matrix(adj).asfptype()
-    largest_eigval, _ = eigsh(laplacian, 1, which='LM')
+    # largest_eigval, _ = eigsh(laplacian, 1, which='LM')
     # scaled_laplacian = (2. / largest_eigval[0]) * laplacian - sp.eye(adj.shape[0])
-    norm_lap = laplacian.toarray()/largest_eigval[0]
-    eigen_val, eigen_vec = LA.eigh(norm_lap)
+    # norm_lap = laplacian.toarray()/largest_eigval[0]
+
+    eigen_val, eigen_vec = LA.eigh(adj)
+
     # eigen_val /= eigen_val[-1]
 
     t_k = list()
