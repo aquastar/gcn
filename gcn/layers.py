@@ -456,8 +456,8 @@ class GraphConvolution_Rational_Element(Layer):
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
         with tf.variable_scope(self.name + '_vars'):
-            self.vars['weights'] = truncated_normal([1, FLAGS.max_degree + 1], name='weights')
-            self.vars['weights_de'] = truncated_normal([1, FLAGS.max_degree + 1], name='weights_de')
+            self.vars['weights'] = ones([1, FLAGS.max_degree + 1], name='weights')
+            self.vars['weights_de'] = ones([1, FLAGS.max_degree + 1], name='weights_de')
             # self.vars['weights_de'] = tf.concat(
             #     [tf.ones([1, 1], tf.float32), truncated_normal([1, FLAGS.max_degree], name='weights_de')], 1)
 

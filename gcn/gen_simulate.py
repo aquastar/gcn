@@ -221,10 +221,10 @@ def gen_gx_graph(data_num, label, spec=True):
     else:
         print('random func')
         random_mat = gen_label_graph(data_num, label).toarray()
-        eigen_val, eigen_vec = LA.eigh(random_mat)
-        eigen_val = np.power(np.abs(eigen_val), 0.5)
-        new_mat = np.dot(np.dot(eigen_vec, np.diag(eigen_val)), np.transpose(eigen_vec))
-        graph = nx.from_numpy_matrix(new_mat)
+        # eigen_val, eigen_vec = LA.eigh(random_mat)
+        # eigen_val = np.power(np.abs(eigen_val), 0.5)
+        # new_mat = np.dot(np.dot(eigen_vec, np.diag(eigen_val)), np.transpose(eigen_vec))
+        graph = nx.from_numpy_matrix(random_mat)
 
     return nx.adjacency_matrix(graph)
 
@@ -273,7 +273,7 @@ def graph_forge(opt='rand'):
     elif opt == 'g-fun':
         print 'Data : control the g(x)'
         feat, label = gen_label_feat(data_num=DATA_NUM, feat_num=FEAT_NUM, class_num=CLASS_NUM)
-        graph = gen_gx_graph(data_num=DATA_NUM, label=label, spec=True)
+        graph = gen_gx_graph(data_num=DATA_NUM, label=label, spec=False)
         # label = gen_label_fr_graph(graph)
         label = to_categorical(label)
 
